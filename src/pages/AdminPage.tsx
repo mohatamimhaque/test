@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getJoinRequests } from '../lib/storage';
+import { getJoinRequests, getJoinRequestsFromSupabase } from '../lib/storage';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AdminSidebar, AdminTab } from '../components/admin/AdminSidebar';
 import { AdminDashboardOverview } from '../components/admin/AdminDashboardOverview';
 import { AdminMembersManager } from '../components/admin/AdminMembersManager';
@@ -27,13 +28,34 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenLoginModal }) => {
 
   useEffect(() => {
     const handleUpdate = () => {
-      setPendingRequestsCount(getJoinRequests().filter(r => r.status === 'pending').length);
+      getJoinRequestsFromSupabase().then(reqs => {
+        setPendingRequestsCount(reqs.filter(r => r.status === 'pending').length);
+      }).catch(() => {});
     };
     handleUpdate();
+
+    let channel: any = null;
+    if (isSupabaseConfigured && supabase) {
+      channel = supabase
+        .channel('realtime_admin_page_badge')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'cse_archive_join_requests' },
+          () => {
+            handleUpdate();
+          }
+        )
+        .subscribe();
+    }
+
     window.addEventListener('join_requests_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('focus', handleUpdate);
+
     return () => {
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
       window.removeEventListener('join_requests_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('focus', handleUpdate);

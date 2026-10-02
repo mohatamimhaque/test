@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Member, AdminUser } from '../types';
+import { Member, AdminUser, JoinRequest } from '../types';
 import { getMemberByEmail, getAdminByEmail, getJoinRequests } from '../lib/storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
@@ -95,7 +95,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const admin = getAdminByEmail(cleanEmail);
     const isSuperAdmin = cleanEmail === 'mohatamimhaque@outlook.com';
     const requests = getJoinRequests();
-    const joinReq = requests.find(r => r.email && r.email.toLowerCase().trim() === cleanEmail);
+    let joinReq = requests.find(r => r.email && r.email.toLowerCase().trim() === cleanEmail);
+
+    if (isSupabaseConfigured && supabase) {
+      const { data: dbReq } = await supabase
+        .from('cse_archive_join_requests')
+        .select('*')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (dbReq) {
+        joinReq = dbReq as JoinRequest;
+      }
+    }
 
     if (options.isLogin) {
       // --- SIGN-IN / LOGIN FLOW ---

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { JoinRequest } from '../../types';
-import { getJoinRequests, reviewJoinRequest, syncJoinRequestsFromSupabase } from '../../lib/storage';
+import { getJoinRequests, reviewJoinRequest, getJoinRequestsFromSupabase } from '../../lib/storage';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { getPhotoUrl, getDefaultAvatar } from '../../lib/r2';
 import { Check, X, Clock, AlertCircle, Building2, MapPin, Mail, Phone, IdCard } from 'lucide-react';
@@ -13,19 +14,36 @@ export const AdminJoinRequests: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
 
   const refreshRequests = () => {
-    setRequests(getJoinRequests());
-    syncJoinRequestsFromSupabase().then(latest => {
-      setRequests(latest);
-    }).catch(() => {});
+    getJoinRequestsFromSupabase().then(setRequests).catch(() => {});
   };
 
   useEffect(() => {
     refreshRequests();
+
+    // Setup Supabase Realtime Channel Subscription for live updates!
+    let channel: any = null;
+    if (isSupabaseConfigured && supabase) {
+      channel = supabase
+        .channel('realtime_admin_join_requests_live')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'cse_archive_join_requests' },
+          () => {
+            refreshRequests();
+          }
+        )
+        .subscribe();
+    }
+
     const handleUpdate = () => refreshRequests();
     window.addEventListener('join_requests_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('focus', handleUpdate);
+
     return () => {
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
       window.removeEventListener('join_requests_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('focus', handleUpdate);
