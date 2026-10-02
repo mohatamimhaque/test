@@ -6,7 +6,6 @@ import { supabase, isSupabaseConfigured } from './supabase';
 const STORAGE_KEYS = {
   MEMBERS: 'cse_archive_members_v1',
   SETTINGS: 'cse_archive_settings_v1',
-  JOIN_REQUESTS: 'cse_archive_join_requests_v1',
   ADMIN_USERS: 'cse_archive_admin_users_v1',
   AUDIT_LOGS: 'cse_archive_audit_logs_v1',
   PAGE_VIEWS: 'cse_archive_page_views_v1',
@@ -73,10 +72,6 @@ export function initStorage(): void {
 
   if (!localStorage.getItem(STORAGE_KEYS.ADMIN_USERS)) {
     setLocal(STORAGE_KEYS.ADMIN_USERS, DEFAULT_ADMINS);
-  }
-
-  if (!localStorage.getItem(STORAGE_KEYS.JOIN_REQUESTS)) {
-    setLocal(STORAGE_KEYS.JOIN_REQUESTS, []);
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
@@ -342,8 +337,8 @@ export function updateSiteSettings(settings: Partial<SiteSettings>, actorEmail?:
 }
 
 // JOIN REQUESTS
+// JOIN REQUESTS - 100% DIRECT SUPABASE TABLE (NO LOCAL STORAGE CACHER)
 export async function getJoinRequestsFromSupabase(): Promise<JoinRequest[]> {
-  initStorage();
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
@@ -352,23 +347,18 @@ export async function getJoinRequestsFromSupabase(): Promise<JoinRequest[]> {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        setLocal(STORAGE_KEYS.JOIN_REQUESTS, data as JoinRequest[]);
         return data as JoinRequest[];
       }
-      if (error) console.error('Error fetching join requests from Supabase DB:', error);
+      if (error) console.error('Error fetching join requests directly from Supabase DB table:', error);
     } catch (err) {
       console.error('Error in getJoinRequestsFromSupabase:', err);
     }
   }
-  return getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+  return [];
 }
 
 export function getJoinRequests(): JoinRequest[] {
-  initStorage();
-  if (isSupabaseConfigured && supabase) {
-    getJoinRequestsFromSupabase().catch(() => {});
-  }
-  return getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+  return [];
 }
 
 export async function submitJoinRequestToSupabase(
@@ -421,20 +411,13 @@ export async function submitJoinRequestToSupabase(
       });
 
     if (error) {
-      console.error('Supabase DB join request insert error:', error);
+      console.error('Supabase DB table join request insert error:', error);
+      throw new Error(error.message);
     }
   }
 
-  // Update local cache as fallback
-  const localReqs = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
-  const idx = localReqs.findIndex(r => r.email && r.email.toLowerCase().trim() === cleanEmail);
-  if (idx !== -1) localReqs.splice(idx, 1);
-  localReqs.unshift(newReq);
-  setLocal(STORAGE_KEYS.JOIN_REQUESTS, localReqs);
-
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('join_requests_updated'));
-    window.dispatchEvent(new Event('storage'));
   }
 
   logAudit({
@@ -449,7 +432,7 @@ export async function submitJoinRequestToSupabase(
 }
 
 export function submitJoinRequest(data: Omit<JoinRequest, 'id' | 'status' | 'created_at' | 'updated_at'>): JoinRequest {
-  submitJoinRequestToSupabase(data).catch(() => {});
+  submitJoinRequestToSupabase(data).catch(console.error);
   const cleanEmail = (data.email || '').toLowerCase().trim();
   return {
     ...data,
@@ -471,7 +454,7 @@ export async function reviewJoinRequestInSupabase(
   let reqToProcess: JoinRequest | null = null;
 
   if (isSupabaseConfigured && supabase) {
-    // 1. Fetch exact request from Supabase DB by ID or email
+    // 1. Fetch exact submitted request directly from Supabase DB table
     const { data: dbReq } = await supabase
       .from('cse_archive_join_requests')
       .select('*')
@@ -482,8 +465,9 @@ export async function reviewJoinRequestInSupabase(
       reqToProcess = dbReq as JoinRequest;
     }
 
-    // 2. Update request status in Supabase DB
     const targetReqId = dbReq ? dbReq.id : id;
+
+    // 2. Update request status directly in Supabase DB table
     const { error: updateErr } = await supabase
       .from('cse_archive_join_requests')
       .update({
@@ -496,10 +480,11 @@ export async function reviewJoinRequestInSupabase(
       .eq('id', targetReqId);
 
     if (updateErr) {
-      console.error('Failed to review join request in Supabase DB:', updateErr);
+      console.error('Failed to update join request in Supabase DB table:', updateErr);
+      throw new Error(updateErr.message);
     }
 
-    // 3. If approved, insert EXACT submitted info into Supabase cse_archive_members table
+    // 3. If approved, insert EXACT submitted info directly into Supabase cse_archive_members table!
     if (status === 'approved' && reqToProcess) {
       const { data: maxIdData } = await supabase
         .from('cse_archive_members')
@@ -532,7 +517,7 @@ export async function reviewJoinRequestInSupabase(
         .maybeSingle();
 
       if (memberErr) {
-        console.error('Supabase member creation error on approval:', memberErr);
+        console.error('Supabase cse_archive_members insert error on approval:', memberErr);
       }
 
       if (insertedMember) {
@@ -548,34 +533,6 @@ export async function reviewJoinRequestInSupabase(
     }
   }
 
-  // Update local cache
-  const localReqs = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
-  const index = localReqs.findIndex(r => r.id === id || (r.email && r.email.toLowerCase().trim() === id.toLowerCase().trim()));
-  if (index !== -1) {
-    localReqs[index].status = status;
-    localReqs[index].reviewed_by = reviewerEmail;
-    localReqs[index].reviewed_at = reviewedAt;
-    localReqs[index].rejection_reason = rejectionReason || '';
-    setLocal(STORAGE_KEYS.JOIN_REQUESTS, localReqs);
-    if (!reqToProcess) reqToProcess = localReqs[index];
-  }
-
-  if (status === 'approved' && reqToProcess) {
-    createMember({
-      name: reqToProcess.name,
-      email: reqToProcess.email,
-      mobile: reqToProcess.mobile || '',
-      student_id: reqToProcess.student_id || '',
-      blood: reqToProcess.blood || '',
-      designation: reqToProcess.designation || '',
-      organization: reqToProcess.organization || '',
-      location: reqToProcess.location || '',
-      photo_key: reqToProcess.photo_key || '',
-      photo_url: reqToProcess.photo_url || '',
-      visible: true,
-    }, reviewerEmail);
-  }
-
   logAudit({
     actor_email: reviewerEmail,
     action: `join_request.${status}`,
@@ -586,12 +543,11 @@ export async function reviewJoinRequestInSupabase(
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('join_requests_updated'));
-    window.dispatchEvent(new Event('storage'));
   }
 }
 
 export function reviewJoinRequest(id: string, status: 'approved' | 'rejected', reviewerEmail: string, rejectionReason?: string): void {
-  reviewJoinRequestInSupabase(id, status, reviewerEmail, rejectionReason).catch(() => {});
+  reviewJoinRequestInSupabase(id, status, reviewerEmail, rejectionReason).catch(console.error);
 }
 
 // ADMIN MANAGEMENT
