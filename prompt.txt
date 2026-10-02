@@ -1,0 +1,1432 @@
+DATABASE_URL=postgresql://neondb_owner:npg_FPqtSI2KUos9@ep-blue-tree-anumhbzm-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+# Admin Authentication
+SESSION_SECRET=duet_reunion_v2_session_secret_2025
+ADMIN_PASSWORD=yadmin123
+# Cloudflare R2 (Object Storage)
+R2_ENDPOINT=https://d284e14d88a942f51c8a61cd326b32f8.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=16bc7c98614159619a9a87368223d23d
+R2_SECRET_ACCESS_KEY=f493361b3eda19848e02a6d0229cd8d1c29cd124af7802a4cbf48a66775c4efa
+R2_BUCKET_NAME=cse-alumni
+
+
+# CSE ARCHIVE
+## FROM-SCRATCH REACT.JS BUILD — NEON DATABASE & CLOUDFLARE R2 DISCOVERY FIRST
+
+You are a senior full-stack engineer and software architect.
+
+Build a completely new application called:
+
+# CSE Archive
+
+The application must be built **from scratch using React.js**.
+
+Do NOT redesign or refactor the existing application.
+
+Do NOT reuse the existing application's frontend architecture.
+
+Do NOT copy its authentication implementation.
+
+Do NOT assume its database structure from documentation.
+
+The first task is to **inspect the existing Neon PostgreSQL database and Cloudflare R2 storage**, understand the actual data and photo structure, and then build the new application around that discovered information.
+
+---
+
+# 1. CORE PRINCIPLE
+
+The existing system is only a:
+
+> DATA SOURCE
+
+The new CSE Archive is a:
+
+> COMPLETELY NEW APPLICATION
+
+The workflow must be:
+
+```text
+Existing Neon PostgreSQL
+        +
+Existing Cloudflare R2
+        ↓
+     DISCOVERY
+        ↓
+Understand actual schema + data + photos
+        ↓
+Design new architecture
+        ↓
+Create new React.js application
+        ↓
+Create new Supabase database
+        ↓
+Migrate required data
+        ↓
+Connect Cloudflare R2
+        ↓
+Implement authentication
+        ↓
+Implement member/admin functionality
+        ↓
+Production optimization
+```
+
+Do not begin by changing the old application.
+
+---
+
+# 2. TECHNOLOGY
+
+Build the new frontend using:
+
+- React.js
+- TypeScript
+- Vite
+- Modern CSS architecture or Tailwind CSS
+- React Router where routing is required
+- Supabase for the new PostgreSQL database and authentication
+- Cloudflare R2 for permanent object storage
+- Vercel-compatible deployment
+
+Do not use Next.js for the new frontend.
+
+The new application must be a React.js application.
+
+---
+
+# 3. EXISTING DATA SOURCE
+
+The existing database is Neon PostgreSQL.
+
+The project provides a `DATABASE_URL` environment variable.
+
+Use the provided database connection **only from the server-side/local migration environment**.
+
+Never expose:
+
+- DATABASE_URL
+- Neon credentials
+- R2 secret access key
+- Supabase service-role key
+
+to the React frontend.
+
+Never put database credentials inside:
+
+```text
+src/
+public/
+frontend JavaScript
+frontend environment variables
+```
+
+---
+
+# 4. VERY FIRST TASK — DATABASE DISCOVERY
+
+Before building the application, inspect the Neon database.
+
+Do not guess the schema.
+
+Connect to the Neon PostgreSQL database using the server-side `DATABASE_URL`.
+
+Perform a complete database discovery.
+
+Inspect:
+
+### Tables
+
+Find every table.
+
+For each table determine:
+
+- table name
+- purpose
+- columns
+- data types
+- nullable fields
+- default values
+- primary keys
+- foreign keys
+- unique constraints
+- indexes
+- sequences
+- relationships
+
+Also inspect:
+
+- views
+- materialized views if any
+- triggers
+- functions
+- enums
+- database constraints
+
+---
+
+# 5. DATABASE DATA INSPECTION
+
+After discovering the schema, inspect the actual data.
+
+For every relevant table determine:
+
+- total row count
+- sample records
+- null frequency
+- duplicate records
+- unique identifiers
+- relationships
+- timestamps
+- image/photo references
+- status fields
+- email fields
+- student ID fields
+
+Do NOT print sensitive credentials.
+
+Do NOT expose passwords or secrets in logs.
+
+Do NOT dump the entire production database unnecessarily.
+
+Use controlled sampling.
+
+---
+
+# 6. DATABASE REPORT
+
+Create a database discovery report before designing the new schema.
+
+Example:
+
+```text
+DATABASE DISCOVERY
+
+Table: xxx
+Rows: 1,250
+
+Columns:
+- id
+- name
+- email
+- mobile
+- student_id
+- photo
+- department
+- organization
+- location
+
+Primary Key:
+id
+
+Indexes:
+...
+
+Relationships:
+...
+```
+
+Repeat for every relevant table.
+
+Clearly classify tables as:
+
+```text
+REQUIRED
+LEGACY
+ANALYTICS
+AUTHENTICATION
+UNKNOWN
+UNUSED
+```
+
+Do not delete anything from Neon.
+
+Neon is the source database and must remain untouched during discovery.
+
+---
+
+# 7. PHOTO / IMAGE DISCOVERY
+
+This is extremely important.
+
+The existing application uses Cloudflare R2.
+
+Before implementing the new member cards, inspect how photos are currently stored.
+
+Determine:
+
+- R2 bucket
+- object key structure
+- photo naming convention
+- folder structure
+- file extensions
+- content types
+- public/private access model
+- database-to-photo relationship
+- whether photo URLs are stored in Neon
+- whether photo object keys are stored in Neon
+- whether multiple photos exist per member
+- whether there are orphaned R2 objects
+
+Do not move the photos yet.
+
+Do not delete anything from R2.
+
+---
+
+# 8. CLOUDFLARE R2 DISCOVERY
+
+Use the existing R2 configuration from the server-side environment.
+
+Inspect the bucket:
+
+```text
+cse-alumni
+```
+
+Determine:
+
+- total objects
+- object keys
+- file types
+- object sizes
+- folder/prefix structure
+- photo naming pattern
+- relevant metadata
+
+Do not expose:
+
+- R2 secret access key
+- access key
+- credentials
+- signed URLs unnecessarily
+
+Do not print secrets in terminal output.
+
+---
+
+# 9. DATABASE ↔ R2 PHOTO MAPPING
+
+Determine exactly how a member is connected to their photo.
+
+Possible examples:
+
+```text
+member.photo
+        ↓
+R2 object key
+        ↓
+Cloudflare R2
+```
+
+or:
+
+```text
+member.photo_url
+        ↓
+R2 URL
+```
+
+or:
+
+```text
+member.student_id
+        ↓
+photo naming convention
+        ↓
+R2 object
+```
+
+Find the actual relationship from the database and existing storage.
+
+Create a mapping report.
+
+Example:
+
+```text
+Member ID: 2204044
+Name: Example Person
+Database photo reference:
+profile/2204044.jpg
+
+R2 object:
+profile/2204044.jpg
+
+Status:
+MATCHED
+```
+
+Also identify:
+
+```text
+DATABASE PHOTO REFERENCE WITHOUT R2 OBJECT
+```
+
+and:
+
+```text
+R2 OBJECT WITHOUT DATABASE REFERENCE
+```
+
+Do not delete either category automatically.
+
+---
+
+# 10. DO NOT MIGRATE PHOTOS TO SUPABASE
+
+Cloudflare R2 remains the permanent storage provider.
+
+Do NOT move existing photos to:
+
+- Supabase Storage
+- Firebase Storage
+- Vercel Blob
+- local filesystem
+
+Existing R2 objects must remain in R2.
+
+The new CSE Archive should continue using Cloudflare R2.
+
+---
+
+# 11. SECOND STAGE — DESIGN THE NEW DATABASE
+
+After understanding Neon, create a new clean Supabase database schema.
+
+Every new application table must use:
+
+```text
+cse_archive_
+```
+
+prefix.
+
+Examples:
+
+```text
+cse_archive_members
+cse_archive_admin_users
+cse_archive_site_settings
+cse_archive_join_requests
+cse_archive_audit_logs
+cse_archive_page_views
+cse_archive_member_views
+```
+
+Never create generic application tables such as:
+
+```text
+members
+admins
+settings
+audit_logs
+```
+
+Use the CSE Archive prefix consistently.
+
+---
+
+# 12. DO NOT BLINDLY COPY THE OLD DATABASE
+
+Do not simply copy every Neon table into Supabase.
+
+Instead:
+
+1. Inspect Neon.
+2. Understand what each table does.
+3. Identify required functionality.
+4. Design a clean new schema.
+5. Map old data into the new schema.
+6. Migrate only meaningful data.
+7. Preserve important historical information.
+
+If an existing table contains useful information that the new application does not currently display, decide whether it should be preserved in the new schema.
+
+Do not silently discard important information.
+
+---
+
+# 13. MIGRATION MAPPING
+
+Create an explicit mapping:
+
+```text
+NEON
+old_table
+    ↓
+SUPABASE
+cse_archive_new_table
+```
+
+For columns:
+
+```text
+old_name → name
+old_email → email
+old_photo → photo_key
+```
+
+Document transformations.
+
+If IDs can safely remain unchanged, preserve them.
+
+If IDs must change:
+
+1. create an ID mapping
+2. migrate parent records
+3. migrate child records
+4. verify relationships
+
+---
+
+# 14. MIGRATION VERIFICATION
+
+After migration compare:
+
+- row counts
+- primary keys
+- important member records
+- emails
+- student IDs
+- photo references
+- relationships
+- timestamps
+- status values
+
+Example:
+
+```text
+cse_archive_members
+
+Neon source:
+1250
+
+Supabase:
+1250
+
+Result:
+PASS
+```
+
+If the numbers differ, explain the reason.
+
+Never silently ignore migration differences.
+
+---
+
+# 15. NEW AUTHENTICATION
+
+Use:
+
+# Supabase Auth
+
+Authentication must use:
+
+> Email + One-Time OTP
+
+Do NOT use the old:
+
+```text
+ADMIN_PASSWORD
+SESSION_SECRET
+custom session token
+custom admin password
+```
+
+authentication system.
+
+Do not create a separate administrator account.
+
+---
+
+# 16. ONE IDENTITY PER PERSON
+
+A person must have only one account.
+
+Example:
+
+```text
+Supabase Auth User
+       ↓
+Member
+       ↓
+Admin role
+```
+
+If the member becomes an administrator, the same user remains the member.
+
+Do not create another account for administration.
+
+---
+
+# 17. ADMIN AUTHORIZATION
+
+Create:
+
+```text
+cse_archive_admin_users
+```
+
+Suggested fields:
+
+```text
+id
+user_id
+role
+status
+created_by
+created_at
+updated_at
+```
+
+Roles:
+
+```text
+admin
+super_admin
+```
+
+Statuses:
+
+```text
+active
+disabled
+```
+
+Authentication:
+
+```text
+Supabase Auth
+```
+
+Authorization:
+
+```text
+cse_archive_admin_users
+```
+
+Keep these systems separate.
+
+---
+
+# 18. SUPER ADMIN
+
+Super Admin can:
+
+- promote members to Admin
+- remove Admin role
+- enable Admin
+- disable Admin
+- manage administrators
+- manage members
+- manage join requests
+- change site settings
+- view audit logs
+- access administrative analytics
+
+Do not hardcode Super Admin emails or passwords.
+
+Authorization must be database-driven.
+
+---
+
+# 19. MEMBER SELF-SERVICE
+
+Authenticated members can update only their own information.
+
+For example:
+
+```text
+User A
+   ↓
+can update User A
+
+User A
+   ↓
+cannot update User B
+```
+
+Enforce this using:
+
+- Supabase RLS
+- server-side validation
+- authorization checks
+
+Never rely only on frontend restrictions.
+
+---
+
+# 20. MEMBER DIRECTORY
+
+Build a completely new professional directory.
+
+Member cards should support the actual fields discovered from Neon.
+
+Potential fields:
+
+- photo
+- name
+- student ID
+- department
+- designation
+- organization
+- location
+- email
+- mobile
+- other relevant fields
+
+Only display sensitive fields publicly when intended.
+
+---
+
+# 21. MEMBER PHOTO SYSTEM
+
+Use Cloudflare R2.
+
+The React application must NOT directly receive R2 secret credentials.
+
+Create a secure backend/server-side mechanism for:
+
+- generating appropriate URLs
+- uploading photos
+- replacing photos
+- deleting photos when authorized
+- validating file type
+- validating file size
+
+Existing photos must continue working.
+
+---
+
+# 22. PUBLIC JOIN SYSTEM
+
+Create a public:
+
+```text
+Join CSE Archive
+```
+
+page.
+
+Admin can enable/disable joining.
+
+Use:
+
+```text
+cse_archive_site_settings
+```
+
+for the configuration.
+
+Join request states:
+
+```text
+pending
+approved
+rejected
+```
+
+Create:
+
+```text
+cse_archive_join_requests
+```
+
+Admins can:
+
+- review
+- approve
+- reject
+
+A public user must never be able to create an administrator.
+
+---
+
+# 23. DYNAMIC SITE SETTINGS
+
+Create:
+
+```text
+cse_archive_site_settings
+```
+
+Allow administrators to configure:
+
+- CSE Archive title
+- subtitle
+- header
+- description
+- logo
+- footer
+- contact information
+- join enabled/disabled
+- other appropriate branding
+
+Do not hardcode these values across the frontend.
+
+---
+
+# 24. BULK IMPORT
+
+Build a professional bulk import system.
+
+Support:
+
+- CSV
+- Excel
+
+Workflow:
+
+```text
+Upload
+↓
+Read
+↓
+Column mapping
+↓
+Preview
+↓
+Validation
+↓
+Duplicate detection
+↓
+Confirmation
+↓
+Import
+↓
+Result
+```
+
+Show:
+
+- inserted
+- updated
+- skipped
+- failed
+
+---
+
+# 25. BULK UPDATE
+
+Administrators should be able to update multiple members.
+
+Support safe bulk operations with:
+
+- validation
+- preview
+- confirmation
+- transaction where appropriate
+- audit logging
+
+---
+
+# 26. ADMIN DASHBOARD
+
+Create a completely new admin panel.
+
+Sections:
+
+```text
+Dashboard
+Members
+Join Requests
+Bulk Import
+Administrators
+Analytics
+Appearance
+Storage
+Audit Logs
+Settings
+```
+
+Use permissions based on Admin vs Super Admin.
+
+---
+
+# 27. AUDIT LOGGING
+
+Create:
+
+```text
+cse_archive_audit_logs
+```
+
+Track important operations:
+
+- member creation
+- member update
+- member deletion
+- member archive
+- member restore
+- admin promotion
+- admin removal
+- admin enable/disable
+- join approval
+- join rejection
+- bulk import
+- bulk update
+- settings update
+
+Do not store secrets.
+
+---
+
+# 28. UI/UX
+
+Build the interface from scratch.
+
+The design should be:
+
+- premium
+- modern
+- professional
+- academic
+- technology-oriented
+- clean
+- responsive
+
+Use:
+
+- modern typography
+- consistent spacing
+- centralized design tokens
+- professional color palette
+- subtle animation
+- strong visual hierarchy
+
+Avoid excessive animations and unnecessary visual effects.
+
+---
+
+# 29. THEME SYSTEM
+
+Support:
+
+```text
+Light
+Dark
+System
+```
+
+The theme must work across:
+
+- public pages
+- member profiles
+- admin dashboard
+- forms
+- tables
+- modals
+
+Avoid theme flashing during startup.
+
+---
+
+# 30. RESPONSIVE DESIGN
+
+The new React application must work properly on:
+
+- mobile
+- tablet
+- laptop
+- desktop
+- large monitors
+
+Design mobile layouts intentionally.
+
+Do not simply shrink desktop layouts.
+
+---
+
+# 31. PERFORMANCE
+
+Optimize:
+
+- initial page load
+- member directory
+- images
+- database queries
+- API calls
+- JavaScript bundle
+- fonts
+- caching
+
+Use:
+
+- pagination
+- lazy loading
+- image optimization
+- code splitting
+- route-level loading
+- efficient database queries
+
+Never load thousands of member records into the browser at once.
+
+---
+
+# 32. SECURITY
+
+Perform a complete security review.
+
+Protect against:
+
+- unauthorized member updates
+- IDOR
+- privilege escalation
+- XSS
+- SQL injection
+- insecure file upload
+- exposed R2 credentials
+- exposed database credentials
+- exposed Supabase service keys
+- unauthorized admin access
+- OTP abuse
+
+Never trust the frontend for authorization.
+
+---
+
+# 33. ENVIRONMENT VARIABLES
+
+Use environment variables only on the appropriate server-side environment.
+
+Example categories:
+
+```text
+NEON_DATABASE_URL
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+R2_ENDPOINT
+R2_ACCESS_KEY_ID
+R2_SECRET_ACCESS_KEY
+R2_BUCKET_NAME
+```
+
+The exact variable names may be changed if appropriate.
+
+Never expose:
+
+```text
+DATABASE_URL
+R2_SECRET_ACCESS_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+to the browser.
+
+---
+
+# 34. IMPORTANT: SECRET HANDLING
+
+The credentials supplied for the existing system are sensitive.
+
+Do NOT:
+
+- commit them to Git
+- place them in React source code
+- place them in public `.env` files
+- print them in logs
+- include them in screenshots
+- expose them through API responses
+- include them in the final documentation
+
+Use local `.env` / server-side environment variables.
+
+After development/migration verification, rotate exposed credentials.
+
+---
+
+# 35. DEVELOPMENT PHASES
+
+Follow these phases strictly.
+
+## PHASE 1 — DISCOVERY
+
+Do ONLY:
+
+- inspect Neon
+- inspect tables
+- inspect columns
+- inspect relationships
+- inspect sample data
+- inspect R2
+- inspect photo structure
+- map database records to photos
+
+Do not redesign the UI yet.
+
+Do not delete anything.
+
+Do not migrate anything yet.
+
+Produce a discovery report.
+
+---
+
+## PHASE 2 — ARCHITECTURE
+
+Based on the actual discovery:
+
+Design:
+
+- React architecture
+- backend/server architecture
+- Supabase schema
+- RLS
+- authentication
+- authorization
+- R2 integration
+- migration strategy
+
+---
+
+## PHASE 3 — NEW PROJECT
+
+Create a completely new React.js project.
+
+Example:
+
+```text
+cse-archive/
+```
+
+Use:
+
+```text
+React
+TypeScript
+Vite
+```
+
+Create a clean folder structure.
+
+Do not copy the old application's frontend.
+
+---
+
+## PHASE 4 — SUPABASE
+
+Create the new:
+
+```text
+cse_archive_*
+```
+
+tables.
+
+Add:
+
+- relationships
+- indexes
+- constraints
+- RLS
+- policies
+
+---
+
+## PHASE 5 — MIGRATION
+
+Migrate:
+
+```text
+Neon
+ ↓
+Supabase
+```
+
+Preserve:
+
+```text
+Neon member data
++
+R2 photo references
+```
+
+Do not move R2 objects.
+
+---
+
+## PHASE 6 — AUTH
+
+Implement:
+
+```text
+Supabase Auth
++
+Email OTP
+```
+
+---
+
+## PHASE 7 — CORE UI
+
+Build:
+
+- homepage
+- member directory
+- search
+- filters
+- member profile
+- login
+- member dashboard
+- join page
+
+---
+
+## PHASE 8 — ADMIN
+
+Build:
+
+- dashboard
+- members
+- bulk import
+- bulk update
+- join requests
+- administrators
+- settings
+- analytics
+- audit logs
+
+---
+
+## PHASE 9 — PREMIUM UI
+
+Implement:
+
+- typography
+- color palette
+- dark/light/system
+- responsive layout
+- animations
+- accessibility
+
+---
+
+## PHASE 10 — PERFORMANCE
+
+Optimize:
+
+- bundle
+- database
+- images
+- R2
+- caching
+- loading
+- API requests
+
+---
+
+## PHASE 11 — SECURITY
+
+Test:
+
+- RLS
+- authentication
+- authorization
+- admin escalation
+- member isolation
+- file upload
+- secret exposure
+
+---
+
+## PHASE 12 — PRODUCTION
+
+Verify:
+
+- production build
+- Vercel deployment
+- environment variables
+- database
+- R2
+- authentication
+- responsive UI
+- migration integrity
+
+---
+
+# 36. FINAL OUTPUT FROM THE DEVELOPMENT AGENT
+
+At the end, provide:
+
+## Database Discovery Report
+
+Include:
+
+- all relevant Neon tables
+- columns
+- row counts
+- relationships
+- important fields
+
+## R2 Discovery Report
+
+Include:
+
+- photo/object structure
+- object counts
+- mapping strategy
+- unmatched objects/references
+
+## New Supabase Schema
+
+List every table:
+
+```text
+cse_archive_...
+```
+
+with:
+
+- purpose
+- columns
+- relationships
+- indexes
+- RLS
+
+## Migration Report
+
+Show:
+
+```text
+Source table
+Destination table
+Source count
+Destination count
+Result
+```
+
+## Authentication Report
+
+Explain:
+
+- Supabase Auth
+- Email OTP
+- member identity
+- admin authorization
+- Super Admin
+
+## Storage Report
+
+Confirm:
+
+```text
+Cloudflare R2 = permanent object storage
+```
+
+and:
+
+```text
+No existing R2 photos were migrated to Supabase Storage.
+```
+
+## Security Report
+
+Explain:
+
+- RLS
+- authorization
+- admin protection
+- secret handling
+- file upload security
+
+## Performance Report
+
+Explain:
+
+- pagination
+- caching
+- image optimization
+- code splitting
+- database optimization
+
+---
+
+# 37. NON-NEGOTIABLE RULES
+
+1. Build the new application from scratch.
+2. Use React.js + TypeScript + Vite.
+3. First inspect Neon.
+4. First inspect R2 and photo relationships.
+5. Do not guess the database schema.
+6. Do not modify Neon during discovery.
+7. Do not delete Neon data.
+8. Do not delete R2 objects.
+9. Do not migrate R2 storage to Supabase.
+10. Use Supabase PostgreSQL for the new application database.
+11. Every new application table must start with `cse_archive_`.
+12. Use Supabase Auth for email OTP.
+13. Never use the old admin password system.
+14. Never hardcode administrator credentials.
+15. Use one identity per person.
+16. Separate authentication from authorization.
+17. Use RLS.
+18. Members can edit only themselves.
+19. Super Admin controls administrator privileges.
+20. Keep Cloudflare R2 as permanent object storage.
+21. Never expose database/R2/Supabase secret credentials to React.
+22. Do not claim migration success without verification.
+23. Do not claim production readiness without testing.
+24. Do not destroy legacy data until the new system has been fully verified.
+25. Preserve existing member information and photo relationships wherever possible.
+
+# FINAL OBJECTIVE
+
+Create a completely new, production-ready:
+
+# CSE Archive
+
+using:
+
+```text
+React.js
+TypeScript
+Vite
+Supabase PostgreSQL
+Supabase Auth
+Cloudflare R2
+Vercel
+```
+
+with the following data flow:
+
+```text
+                 EXISTING SYSTEM
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+       Neon DB                 Cloudflare R2
+          │                         │
+          └────────────┬────────────┘
+                       │
+                  DISCOVERY
+                       │
+                       ▼
+             DATA / PHOTO MAPPING
+                       │
+                       ▼
+              NEW CSE ARCHIVE
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+     Supabase DB               Cloudflare R2
+     cse_archive_*             Existing Objects
+          │                         │
+          └────────────┬────────────┘
+                       │
+                       ▼
+                React.js UI
+                       │
+                       ▼
+              Members / Admins
+                       │
+                       ▼
+               Production Vercel
+```
+
+The old application is NOT the new application.
+
+The old Neon database is a DATA SOURCE.
+
+Cloudflare R2 remains the STORAGE SOURCE.
+
+The new CSE Archive must be a clean, independent React.js application built from scratch.
