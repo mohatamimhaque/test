@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSiteSettings, submitJoinRequest } from '../lib/storage';
+import { getSiteSettings, submitJoinRequest, submitJoinRequestToSupabase } from '../lib/storage';
 import { processPhotoUpload, getPhotoUrl } from '../lib/r2';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -220,7 +220,7 @@ export const JoinPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailVerified) {
       alert('You must verify your email address via OTP first.');
@@ -232,8 +232,15 @@ export const JoinPage: React.FC = () => {
       return;
     }
 
-    submitJoinRequest(formData);
-    setSubmitted(true);
+    try {
+      setVerifyingLoading(true);
+      await submitJoinRequestToSupabase(formData);
+      setSubmitted(true);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit application');
+    } finally {
+      setVerifyingLoading(false);
+    }
   };
 
   if (submitted) {

@@ -445,6 +445,7 @@ export async function reviewJoinRequestInSupabase(
   rejectionReason?: string
 ): Promise<void> {
   const reviewedAt = new Date().toISOString();
+  let reqToProcess: JoinRequest | null = null;
 
   if (isSupabaseConfigured && supabase) {
     const { data: updatedReq, error } = await supabase
@@ -458,38 +459,13 @@ export async function reviewJoinRequestInSupabase(
       })
       .eq('id', id)
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Failed to review join request in Supabase DB:', error);
     }
-
-    if (status === 'approved' && updatedReq) {
-      const { data: membersData } = await supabase
-        .from('cse_archive_members')
-        .select('id')
-        .order('id', { ascending: false })
-        .limit(1);
-
-      const nextId = (membersData && membersData.length > 0 ? membersData[0].id : 922) + 1;
-
-      await supabase.from('cse_archive_members').upsert({
-        id: nextId,
-        legacy_id: nextId,
-        name: updatedReq.name,
-        email: updatedReq.email,
-        mobile: updatedReq.mobile || '',
-        student_id: updatedReq.student_id || '',
-        blood: updatedReq.blood || '',
-        designation: updatedReq.designation || '',
-        organization: updatedReq.organization || '',
-        location: updatedReq.location || '',
-        photo_key: updatedReq.photo_key || '',
-        photo_url: updatedReq.photo_url || '',
-        visible: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+    if (updatedReq) {
+      reqToProcess = updatedReq as JoinRequest;
     }
   }
 
@@ -502,25 +478,23 @@ export async function reviewJoinRequestInSupabase(
     localReqs[index].reviewed_at = reviewedAt;
     localReqs[index].rejection_reason = rejectionReason || '';
     setLocal(STORAGE_KEYS.JOIN_REQUESTS, localReqs);
+    if (!reqToProcess) reqToProcess = localReqs[index];
   }
 
-  if (status === 'approved') {
-    const target = index !== -1 ? localReqs[index] : null;
-    if (target) {
-      createMember({
-        name: target.name,
-        email: target.email,
-        mobile: target.mobile,
-        student_id: target.student_id,
-        blood: target.blood,
-        designation: target.designation,
-        organization: target.organization,
-        location: target.location,
-        photo_key: target.photo_key,
-        photo_url: target.photo_url,
-        visible: true,
-      }, reviewerEmail);
-    }
+  if (status === 'approved' && reqToProcess) {
+    createMember({
+      name: reqToProcess.name,
+      email: reqToProcess.email,
+      mobile: reqToProcess.mobile || '',
+      student_id: reqToProcess.student_id || '',
+      blood: reqToProcess.blood || '',
+      designation: reqToProcess.designation || '',
+      organization: reqToProcess.organization || '',
+      location: reqToProcess.location || '',
+      photo_key: reqToProcess.photo_key || '',
+      photo_url: reqToProcess.photo_url || '',
+      visible: true,
+    }, reviewerEmail);
   }
 
   logAudit({

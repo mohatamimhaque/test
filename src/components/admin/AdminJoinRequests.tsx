@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JoinRequest } from '../../types';
-import { getJoinRequests, reviewJoinRequest, getJoinRequestsFromSupabase } from '../../lib/storage';
+import { getJoinRequests, reviewJoinRequest, reviewJoinRequestInSupabase, getJoinRequestsFromSupabase } from '../../lib/storage';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { getPhotoUrl, getDefaultAvatar } from '../../lib/r2';
@@ -55,18 +55,18 @@ export const AdminJoinRequests: React.FC = () => {
     return r.status === filterStatus;
   });
 
-  const handleApprove = (req: JoinRequest) => {
+  const handleApprove = async (req: JoinRequest) => {
     if (window.confirm(`Approve join request from ${req.name}? This will automatically add them to the official member directory.`)) {
-      reviewJoinRequest(req.id, 'approved', user?.email || 'admin@cse-archive.edu');
+      await reviewJoinRequestInSupabase(req.id, 'approved', user?.email || 'admin@cse-archive.edu');
       refreshRequests();
     }
   };
 
-  const handleConfirmReject = (e: React.FormEvent) => {
+  const handleConfirmReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingReq) return;
 
-    reviewJoinRequest(rejectingReq.id, 'rejected', user?.email || 'admin@cse-archive.edu', rejectionReason);
+    await reviewJoinRequestInSupabase(rejectingReq.id, 'rejected', user?.email || 'admin@cse-archive.edu', rejectionReason);
     setRejectingReq(null);
     setRejectionReason('');
     refreshRequests();
