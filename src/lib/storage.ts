@@ -104,8 +104,31 @@ export function initStorage(): void {
 }
 
 // MEMBER MANAGEMENT
+export async function getMembersFromSupabase(): Promise<Member[]> {
+  initStorage();
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('cse_archive_members')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        setLocal(STORAGE_KEYS.MEMBERS, data as Member[]);
+        return data as Member[];
+      }
+    } catch (err) {
+      console.error('Error fetching members from Supabase:', err);
+    }
+  }
+  return getLocal<Member[]>(STORAGE_KEYS.MEMBERS, []);
+}
+
 export function getMembers(): Member[] {
   initStorage();
+  if (isSupabaseConfigured && supabase) {
+    getMembersFromSupabase().catch(() => {});
+  }
   return getLocal<Member[]>(STORAGE_KEYS.MEMBERS, []);
 }
 
@@ -448,7 +471,20 @@ export async function reviewJoinRequestInSupabase(
   let reqToProcess: JoinRequest | null = null;
 
   if (isSupabaseConfigured && supabase) {
-    const { data: updatedReq, error } = await supabase
+    // 1. Fetch exact request from Supabase DB by ID or email
+    const { data: dbReq } = await supabase
+      .from('cse_archive_join_requests')
+      .select('*')
+      .or(`id.eq.${id},email.eq.${id.toLowerCase().trim()}`)
+      .maybeSingle();
+
+    if (dbReq) {
+      reqToProcess = dbReq as JoinRequest;
+    }
+
+    // 2. Update request status in Supabase DB
+    const targetReqId = dbReq ? dbReq.id : id;
+    const { error: updateErr } = await supabase
       .from('cse_archive_join_requests')
       .update({
         status,
@@ -457,15 +493,58 @@ export async function reviewJoinRequestInSupabase(
         rejection_reason: rejectionReason || '',
         updated_at: reviewedAt,
       })
-      .eq('id', id)
-      .select('*')
-      .maybeSingle();
+      .eq('id', targetReqId);
 
-    if (error) {
-      console.error('Failed to review join request in Supabase DB:', error);
+    if (updateErr) {
+      console.error('Failed to review join request in Supabase DB:', updateErr);
     }
-    if (updatedReq) {
-      reqToProcess = updatedReq as JoinRequest;
+
+    // 3. If approved, insert EXACT submitted info into Supabase cse_archive_members table
+    if (status === 'approved' && reqToProcess) {
+      const { data: maxIdData } = await supabase
+        .from('cse_archive_members')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+
+      const nextId = (maxIdData && maxIdData.length > 0 ? maxIdData[0].id : 922) + 1;
+
+      const { data: insertedMember, error: memberErr } = await supabase
+        .from('cse_archive_members')
+        .upsert({
+          id: nextId,
+          legacy_id: nextId,
+          name: reqToProcess.name,
+          email: reqToProcess.email.toLowerCase().trim(),
+          mobile: reqToProcess.mobile || '',
+          student_id: reqToProcess.student_id || '',
+          blood: reqToProcess.blood || '',
+          designation: reqToProcess.designation || '',
+          organization: reqToProcess.organization || '',
+          location: reqToProcess.location || '',
+          photo_key: reqToProcess.photo_key || '',
+          photo_url: reqToProcess.photo_url || '',
+          visible: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('*')
+        .maybeSingle();
+
+      if (memberErr) {
+        console.error('Supabase member creation error on approval:', memberErr);
+      }
+
+      if (insertedMember) {
+        const members = getMembers();
+        const existingIdx = members.findIndex(m => m.email && m.email.toLowerCase().trim() === insertedMember.email.toLowerCase().trim());
+        if (existingIdx !== -1) {
+          members[existingIdx] = insertedMember as Member;
+        } else {
+          members.unshift(insertedMember as Member);
+        }
+        saveMembers(members);
+      }
     }
   }
 
