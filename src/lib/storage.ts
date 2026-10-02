@@ -171,6 +171,29 @@ export function updateMember(id: number, updates: Partial<Member>, actorEmail?: 
   members[index] = updated;
   saveMembers(members);
 
+  if (isSupabaseConfigured && supabase) {
+    supabase
+      .from('cse_archive_members')
+      .update({
+        name: updated.name,
+        email: updated.email,
+        mobile: updated.mobile,
+        student_id: updated.student_id,
+        blood: updated.blood,
+        designation: updated.designation,
+        organization: updated.organization,
+        location: updated.location,
+        photo_key: updated.photo_key,
+        photo_url: updated.photo_url,
+        visible: updated.visible,
+        updated_at: updated.updated_at,
+      })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync member update to Supabase:', error);
+      });
+  }
+
   logAudit({
     actor_email: actorEmail || 'system',
     action: 'member.update',
@@ -207,6 +230,31 @@ export function createMember(newMember: Omit<Member, 'id' | 'legacy_id' | 'creat
   members.unshift(created);
   saveMembers(members);
 
+  if (isSupabaseConfigured && supabase) {
+    supabase
+      .from('cse_archive_members')
+      .upsert({
+        id: created.id,
+        legacy_id: created.legacy_id,
+        name: created.name,
+        email: created.email,
+        mobile: created.mobile,
+        student_id: created.student_id,
+        blood: created.blood,
+        designation: created.designation,
+        organization: created.organization,
+        location: created.location,
+        photo_key: created.photo_key,
+        photo_url: created.photo_url,
+        visible: created.visible,
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+      })
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync member creation to Supabase:', error);
+      });
+  }
+
   logAudit({
     actor_email: actorEmail || 'system',
     action: 'member.create',
@@ -223,6 +271,16 @@ export function deleteMember(id: number, actorEmail?: string): void {
   const member = members.find(m => m.id === id);
   const filtered = members.filter(m => m.id !== id);
   saveMembers(filtered);
+
+  if (isSupabaseConfigured && supabase) {
+    supabase
+      .from('cse_archive_members')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync member deletion to Supabase:', error);
+      });
+  }
 
   logAudit({
     actor_email: actorEmail || 'system',
