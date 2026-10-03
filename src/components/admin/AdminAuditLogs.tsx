@@ -83,7 +83,7 @@ export const AdminAuditLogs: React.FC = () => {
 
       {/* Details JSON Viewer Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm flex min-h-full items-center justify-center">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 space-y-3">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
               <h4 className="font-bold text-slate-900 dark:text-white text-sm font-outfit">Audit Log Details</h4>
