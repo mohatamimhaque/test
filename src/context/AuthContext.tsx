@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isSupabaseConfigured && supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
+        // A live Supabase session always wins over the cached email.
         if (session?.user?.email) {
           loadUserState(session.user.email, session.user.id);
         }
@@ -72,10 +73,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user?.email) {
           loadUserState(session.user.email, session.user.id);
-        } else {
+        } else if (_event === 'SIGNED_OUT') {
+          // Only an explicit sign-out should clear local auth state.
+          //
+          // Supabase also emits a null session on initial hydration, tab
+          // restore and token refresh failures. Clearing on those silently
+          // logged users out on every reload while their cached email was
+          // still in localStorage, so the UI showed "Sign In" for someone who
+          // was in fact still verified locally.
           setUser(null);
           setMember(null);
           setAdmin(null);
+          localStorage.removeItem('cse_archive_auth_email');
         }
         setLoading(false);
       });

@@ -19,6 +19,8 @@ import {
   Users,
   User,
   LogIn,
+  LogOut,
+  Settings2,
   type LucideIcon,
 } from 'lucide-react';
 import { getSiteSettings } from '../../lib/storage';
@@ -59,11 +61,12 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onOpenLogin,
 }) => {
   const settings = getSiteSettings();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [themeOpen, setThemeOpen] = React.useState(false);
+  const [accountOpen, setAccountOpen] = React.useState(false);
 
   const meta = ROUTE_META.find((entry) => entry.match(location.pathname));
   const isHome = location.pathname === '/';
@@ -75,6 +78,16 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
     (isHome ? settings.subtitle || 'Alumni & Directory' : 'CSE Archive');
 
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Laptop;
+
+  // Signed-in visitors get a single account button that owns appearance and
+  // sign-out, so the theme toggle and logout are not competing for the header.
+  const handleSignOut = async () => {
+    setAccountOpen(false);
+    await logout();
+    if (location.pathname === '/member-dashboard' || location.pathname.startsWith('/admin')) {
+      navigate('/');
+    }
+  };
 
   return (
     <header className="m-topbar shrink-0">
@@ -118,17 +131,23 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           </Link>
         )}
 
-        {showThemeToggle && (
-          <>
-            <button
-              onClick={() => setThemeOpen(true)}
-              className="m-tap p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
-              aria-label="Switch theme"
-            >
-              <ThemeIcon className="w-5 h-5" />
-            </button>
-          </>
-        )}
+        {user ? (
+          <button
+            onClick={() => setAccountOpen(true)}
+            className="m-tap p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+            aria-label="Account"
+          >
+            <Settings2 className="w-5 h-5" />
+          </button>
+        ) : showThemeToggle ? (
+          <button
+            onClick={() => setThemeOpen(true)}
+            className="m-tap p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+            aria-label="Switch theme"
+          >
+            <ThemeIcon className="w-5 h-5" />
+          </button>
+        ) : null}
       </div>
 
       {/* Inline search field */}
@@ -187,6 +206,48 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           ))}
         </div>
       </Sheet>
+      {/* Account sheet: appearance + sign out. */}
+      <Sheet
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        title="Account"
+        subtitle={user?.email || undefined}
+      >
+        <div className="space-y-2 pb-2">
+          <button
+            onClick={() => {
+              setAccountOpen(false);
+              setThemeOpen(true);
+            }}
+            className="m-tap w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 text-left"
+          >
+            <ThemeIcon className="w-5 h-5 text-primary-500" />
+            <span className="text-sm font-semibold flex-1 text-slate-700 dark:text-slate-200">Appearance</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 capitalize">{theme}</span>
+          </button>
+
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setAccountOpen(false);
+                navigate('/admin');
+              }}
+              className="m-tap w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 text-left"
+            >
+              <ShieldCheck className="w-5 h-5 text-amber-500" />
+              <span className="text-sm font-semibold flex-1 text-slate-700 dark:text-slate-200">Admin panel</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleSignOut}
+            className="m-tap w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-red-200 dark:border-red-900/60 bg-red-50/60 dark:bg-red-950/30 text-left"
+          >
+            <LogOut className="w-5 h-5 text-red-500" />
+            <span className="text-sm font-semibold flex-1 text-red-600 dark:text-red-400">Sign out</span>
+          </button>
+        </div>
+      </Sheet>
     </header>
   );
 };
@@ -242,11 +303,13 @@ export const MobileTabBar: React.FC<MobileTabBarProps> = ({ onOpenLogin }) => {
           );
         })}
 
-        {/* Trailing action: sign in, or theme toggle once authenticated */}
+        {/* Trailing action: sign in, or the theme shortcut once authenticated.
+            Sign out lives in the header account sheet. */}
         {!user ? (
           <button
             onClick={onOpenLogin}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 rounded-2xl text-slate-400 dark:text-slate-500 transition-colors"
+            aria-label="Sign in"
           >
             <div className="p-1.5 rounded-xl">
               <LogIn className="w-5 h-5 text-primary-500" strokeWidth={2} />

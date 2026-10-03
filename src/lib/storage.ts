@@ -26,6 +26,34 @@ const STORAGE_KEYS = {
   JOIN_REQUESTS: 'cse_archive_join_requests_v1',
 };
 
+/**
+ * Row caps for the append-only localStorage history.
+ *
+ * The browser grants every origin one small, shared localStorage budget
+ * (commonly 5–10 MB, and far less when the page runs in a partitioned
+ * third-party context). The member directory alone needs ~800 KB, so the
+ * history has to stay deliberately small: these caps hold the total near
+ * 1.2 MB at steady state instead of creeping past 2 MB, where every write
+ * starts failing with QuotaExceededError.
+ */
+const STORAGE_LIMITS: Record<string, number> = {
+  [STORAGE_KEYS.PAGE_VIEWS]: 400,
+  [STORAGE_KEYS.MEMBER_VIEWS]: 300,
+  [STORAGE_KEYS.SEARCH_VIEWS]: 400,
+  [STORAGE_KEYS.AUDIT_LOGS]: 200,
+  [STORAGE_KEYS.JOIN_REQUESTS]: 200,
+};
+
+/**
+ * Keys whose oldest rows may be dropped to reclaim space. The member
+ * directory is deliberately absent — it is the only irreplaceable key, so it
+ * is never trimmed to make room for analytics.
+ */
+const PRUNABLE_KEYS = Object.keys(STORAGE_LIMITS);
+
+/** Marks compaction as done so the rewrite below runs at most once. */
+const COMPACTION_KEY = 'cse_archive_storage_compacted_v2';
+
 const DEFAULT_SETTINGS: SiteSettings = {
   id: 1,
   title: 'CSE Archive',
@@ -120,10 +148,138 @@ function getLocal<T>(key: string, defaultValue: T): T {
 
 // Helper to safely write JSON to localStorage
 function setLocal<T>(key: string, value: T): void {
+  const raw = JSON.stringify(value);
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, raw);
   } catch (err) {
+    // Out of quota. Reclaiming the prunable history almost always frees enough
+    // room, so retry once before giving up and reporting the failure.
+    if (!reclaiming && reclaimStorage(key)) {
+      try {
+        localStorage.setItem(key, raw);
+        return;
+      } catch (retryErr) {
+        console.error(`Error saving key ${key} after reclaim:`, retryErr);
+        return;
+      }
+    }
     console.error(`Error saving key ${key}:`, err);
+  }
+}
+
+/** Guards reclaimStorage() from re-entering setLocal()'s retry path. */
+let reclaiming = false;
+
+/** Total bytes currently held by the app's own localStorage keys. */
+function usedStorageBytes(): number {
+  let total = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    total += (localStorage.getItem(k) || '').length * 2;
+  }
+  return total;
+}
+
+/**
+ * Trims the prunable history keys (newest rows kept) until the origin is back
+ * under budget, then trims the failed key itself.
+ *
+ * The member directory is never touched: losing it would wipe the archive,
+ * and it is restorable from Supabase. Analytics and audit rows are
+ * regenerable/lossy by nature, so they absorb the pressure instead.
+ */
+function reclaimStorage(failedKey: string): boolean {
+  // Bail out for keys we must not lose — better to report than to trim them.
+  if (failedKey === STORAGE_KEYS.MEMBERS || failedKey === STORAGE_KEYS.SETTINGS) {
+    return false;
+  }
+
+  reclaiming = true;
+  try {
+    // Shrink other history keys first, halving each pass until we fit.
+    for (const key of PRUNABLE_KEYS) {
+      if (key === failedKey) continue;
+      const rows = getLocal<unknown[]>(key, []);
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+
+      const half = Math.floor(rows.length / 2);
+      if (half >= 1) {
+        // Raw write: never re-enter the retry path from inside a reclaim.
+        try {
+          localStorage.setItem(key, JSON.stringify(rows.slice(0, half)));
+        } catch {
+          localStorage.removeItem(key);
+        }
+      } else {
+        localStorage.removeItem(key);
+      }
+
+      if (usedStorageBytes() < SOFT_STORAGE_BUDGET_BYTES) return true;
+    }
+
+    // Nothing left to trim but the key that failed to save.
+    const failedRows = getLocal<unknown[]>(failedKey, []);
+    if (Array.isArray(failedRows) && failedRows.length > 0) {
+      try {
+        localStorage.setItem(failedKey, JSON.stringify(failedRows.slice(0, 1)));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  } finally {
+    reclaiming = false;
+  }
+}
+
+const SOFT_STORAGE_BUDGET_BYTES = 3.5 * 1024 * 1024;
+
+/**
+ * One-time compaction of history that was written before the caps existed.
+ *
+ * Browsers that already hit QuotaExceededError are stuck: every subsequent
+ * write fails, so new join requests are never cached. This trims each history
+ * key down to its cap and strips the bulky per-row user-agent strings, which
+ * together free enough room to resume normal operation.
+ */
+function compactStorageOnce(): void {
+  try {
+    if (localStorage.getItem(COMPACTION_KEY)) return;
+
+    reclaiming = true;
+    for (const key of PRUNABLE_KEYS) {
+      const rows = getLocal<unknown[]>(key, []);
+      if (!Array.isArray(rows)) continue;
+
+      const limit = STORAGE_LIMITS[key];
+      let trimmed = rows.slice(0, limit).map((row) => {
+        // Replace the full UA string with a compact label.
+        if (row && typeof row === 'object' && 'user_agent' in (row as Record<string, unknown>)) {
+          const rec = { ...(row as Record<string, unknown>) };
+          const ua = String(rec.user_agent || '');
+          if (ua.length > 40) {
+            const short = ua.length > 28 ? ua.slice(0, 28) + '…' : ua;
+            rec.user_agent = short;
+          }
+          return rec;
+        }
+        return row;
+      });
+
+      try {
+        localStorage.setItem(key, JSON.stringify(trimmed));
+      } catch {
+        localStorage.removeItem(key);
+      }
+    }
+
+    localStorage.setItem(COMPACTION_KEY, new Date().toISOString());
+  } catch (err) {
+    console.error('Storage compaction failed:', err);
+  } finally {
+    reclaiming = false;
   }
 }
 
@@ -131,6 +287,9 @@ function setLocal<T>(key: string, value: T): void {
 export function initStorage(): void {
   // Keep previously-seeded site copy in sync with DEFAULT_SETTINGS.
   migrateSettingsCopy();
+
+  // Reclaim space from pre-cap history before anything tries to write.
+  compactStorageOnce();
 
   if (!localStorage.getItem(STORAGE_KEYS.MEMBERS)) {
     const members = initialMembersRaw as Member[];
@@ -517,7 +676,7 @@ function saveJoinRequestLocal(row: Omit<JoinRequest, 'id'>): JoinRequest {
   const nextId = requests.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1;
   const created: JoinRequest = { ...row, id: nextId };
   requests.unshift(created);
-  setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, 500));
+  setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, STORAGE_LIMITS[STORAGE_KEYS.JOIN_REQUESTS]));
   return created;
 }
 
@@ -526,7 +685,7 @@ function cacheJoinRequest(request: JoinRequest): void {
   const idx = requests.findIndex((r) => Number(r.id) === Number(request.id));
   if (idx >= 0) requests[idx] = request;
   else requests.unshift(request);
-  setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, 500));
+  setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, STORAGE_LIMITS[STORAGE_KEYS.JOIN_REQUESTS]));
 }
 
 /** All join requests, newest first. Supabase first, localStorage as fallback. */
@@ -827,26 +986,56 @@ export function logAudit(log: Omit<AuditLog, 'id' | 'created_at'>): void {
   };
 
   logs.unshift(newLog);
-  setLocal(STORAGE_KEYS.AUDIT_LOGS, logs.slice(0, 500)); // Keep recent 500 logs
+  setLocal(STORAGE_KEYS.AUDIT_LOGS, logs.slice(0, STORAGE_LIMITS[STORAGE_KEYS.AUDIT_LOGS]));
 }
 
 // ANALYTICS TRACKING
+/**
+ * Short, human-readable device label, e.g. `Chrome · Windows`.
+ *
+ * Storing the full `navigator.userAgent` on every tracked row cost ~110
+ * characters each, and the string is identical for every row from the same
+ * browser. A compact token is just as informative in the analytics table and
+ * keeps a large share of the localStorage budget.
+ */
+function describeDevice(): string {
+  if (typeof navigator === 'undefined') return 'Unknown device';
+  const ua = navigator.userAgent;
+  const browser =
+    /\bEdg\//.test(ua) ? 'Edge'
+    : /\bOPR\//.test(ua) ? 'Opera'
+    : /\bFirefox\//.test(ua) ? 'Firefox'
+    : /\bChrome\//.test(ua) ? 'Chrome'
+    : /\bSafari\//.test(ua) ? 'Safari'
+    : 'Browser';
+  const platform =
+    /Windows/.test(ua) ? 'Windows'
+    : /Android/.test(ua) ? 'Android'
+    : /iPhone|iPad|iPod/.test(ua) ? 'iOS'
+    : /Mac OS/.test(ua) ? 'macOS'
+    : /Linux/.test(ua) ? 'Linux'
+    : 'Unknown OS';
+  const versionMatch = ua.match(/(?:Edg|OPR|Chrome|Firefox|Version)\/([\d.]+)/);
+  const version = versionMatch ? versionMatch[1].split('.')[0] : '';
+  return version ? `${browser} ${version} · ${platform}` : `${browser} · ${platform}`;
+}
+
 export function trackPageView(path: string): void {
   initStorage();
   const views = getLocal<PageView[]>(STORAGE_KEYS.PAGE_VIEWS, []);
-  
+
   const newView: PageView = {
     id: Date.now(),
     path,
     ip_hash: 'beb78c1bbbd0f840',
-    user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/149.0',
+    user_agent: describeDevice(),
     country: 'Bangladesh',
     city: 'Dhaka',
     created_at: new Date().toISOString(),
   };
 
   views.unshift(newView);
-  setLocal(STORAGE_KEYS.PAGE_VIEWS, views.slice(0, 1000));
+  setLocal(STORAGE_KEYS.PAGE_VIEWS, views.slice(0, STORAGE_LIMITS[STORAGE_KEYS.PAGE_VIEWS]));
 }
 
 export function trackMemberView(memberId: number, memberName: string): void {
@@ -864,14 +1053,14 @@ export function trackMemberView(memberId: number, memberName: string): void {
     member_id: memberId,
     member_name: memberName,
     ip_hash: 'beb78c1bbbd0f840',
-    user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/132.0',
+    user_agent: describeDevice(),
     country: 'Bangladesh',
     city: 'Dhaka',
     created_at: new Date().toISOString(),
   };
 
   views.unshift(newView);
-  setLocal(STORAGE_KEYS.MEMBER_VIEWS, views.slice(0, 1000));
+  setLocal(STORAGE_KEYS.MEMBER_VIEWS, views.slice(0, STORAGE_LIMITS[STORAGE_KEYS.MEMBER_VIEWS]));
 }
 
 export function getPageViews(): PageView[] {
@@ -930,17 +1119,14 @@ export function trackSearch(
     source,
     filters,
     ip_hash: 'beb78c1bbbd0f840',
-    user_agent:
-      typeof navigator !== 'undefined'
-        ? navigator.userAgent
-        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/149.0',
+    user_agent: describeDevice(),
     country: 'Bangladesh',
     city: 'Dhaka',
     created_at: new Date().toISOString(),
   };
 
   views.unshift(newView);
-  setLocal(STORAGE_KEYS.SEARCH_VIEWS, views.slice(0, 1000));
+  setLocal(STORAGE_KEYS.SEARCH_VIEWS, views.slice(0, STORAGE_LIMITS[STORAGE_KEYS.SEARCH_VIEWS]));
 }
 
 export function getSearchViews(): SearchView[] {

@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2 } from 'lucide-react';
 
 interface SheetProps {
@@ -38,8 +39,14 @@ export const Sheet: React.FC<SheetProps> = ({ open, onClose, title, subtitle, ch
   }, [open, onClose]);
 
   if (!open) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
+  // Rendered through a portal so the sheet always anchors to the viewport.
+  // Any ancestor with `backdrop-filter`, `filter`, `transform` or `contain`
+  // becomes the containing block for `position: fixed` descendants. The
+  // sticky header uses `backdrop-blur-xl`, so a sheet rendered inside it would
+  // anchor to the header instead and get pushed off-screen.
+  return createPortal(
     <>
       <div className="m-sheet-backdrop" onClick={onClose} aria-hidden="true" />
       <div
@@ -75,7 +82,8 @@ export const Sheet: React.FC<SheetProps> = ({ open, onClose, title, subtitle, ch
 
         {footer && <div className="shrink-0 px-5 pt-3 border-t border-slate-100 dark:border-slate-800">{footer}</div>}
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 
