@@ -170,7 +170,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({ member, onClose }) => 
             {/* Footer Subtext */}
             <div className="text-center pt-1 border-t border-[#121f38]">
               <p className="text-[9px] font-extrabold tracking-widest text-slate-400 uppercase">
-                DHAKA UNIVERSITY OF ENGINEERING & TECHNOLOGY, GAZIPUR
+                DHAKA UNIVERSITY OF ENGINEERING AND TECHNOLOGY, GAZIPUR
               </p>
             </div>
 

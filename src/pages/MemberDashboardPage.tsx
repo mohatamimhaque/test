@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { updateMember, getJoinRequests } from '../lib/storage';
+import { updateMember } from '../lib/storage';
 import { usePhotoUrl, processPhotoUpload } from '../lib/r2';
-import { User, Upload, Save, Check, Loader2, ShieldCheck, ShieldAlert, Phone, Building2, MapPin, IdCard, Droplet, Clock, UserPlus, ArrowRight, Eye } from 'lucide-react';
+import { User, Upload, Save, Check, Loader2, ShieldCheck, ShieldAlert, Phone, Building2, MapPin, IdCard, Droplet, Eye } from 'lucide-react';
 
 export const MemberDashboardPage: React.FC = () => {
   const { user, member, refreshAuth } = useAuth();
@@ -76,67 +76,13 @@ export const MemberDashboardPage: React.FC = () => {
   }
 
   if (user && !currentMember) {
-    const userEmailClean = user.email.toLowerCase().trim();
-    const req = getJoinRequests().find(r => r.email && r.email.toLowerCase().trim() === userEmailClean);
-
-    if (req && req.status === 'pending') {
-      return (
-        <div className="max-w-xl mx-auto my-16 p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-4 shadow-xl">
-          <Clock className="w-14 h-14 text-amber-500 mx-auto" />
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-outfit">Join Application Pending Review</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Your profile application for <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{user.email}</span> has been received and is currently undergoing administrator verification.
-          </p>
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs text-amber-700 dark:text-amber-300">
-            Status: <strong>Pending Administrator Review</strong>
-          </div>
-          <button
-            onClick={() => navigate('/directory')}
-            className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
-          >
-            Explore Member Directory
-          </button>
-        </div>
-      );
-    }
-
-    if (req && req.status === 'rejected') {
-      return (
-        <div className="max-w-xl mx-auto my-16 p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-4 shadow-xl">
-          <ShieldAlert className="w-14 h-14 text-rose-500 mx-auto" />
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-outfit">Application Rejected</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Your join application for <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{user.email}</span> was reviewed and rejected.
-          </p>
-          {req.rejection_reason && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl text-xs text-rose-700 dark:text-rose-300">
-              Reason: <strong>{req.rejection_reason}</strong>
-            </div>
-          )}
-          <button
-            onClick={() => navigate('/join')}
-            className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
-          >
-            Re-apply with Updated Info
-          </button>
-        </div>
-      );
-    }
-
     return (
       <div className="max-w-xl mx-auto my-16 p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-center space-y-4 shadow-xl">
-        <UserPlus className="w-14 h-14 text-primary-500 mx-auto" />
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-outfit">Join CSE Archive First</h2>
+        <ShieldAlert className="w-14 h-14 text-rose-500 mx-auto" />
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-outfit">No Alumni Profile Found</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          No registered alumni profile was found for <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{user.email}</span>. Please complete and submit your Join Application form.
+          No registered alumni profile was found for <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{user.email}</span>. Please contact an administrator.
         </p>
-        <button
-          onClick={() => navigate('/join')}
-          className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 mx-auto"
-        >
-          Complete Join Application Form
-          <ArrowRight className="w-4 h-4" />
-        </button>
       </div>
     );
   }

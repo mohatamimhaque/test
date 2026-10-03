@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Mail, KeyRound, UserCheck, ArrowRight, Loader2, RefreshCw, Lock, Sparkles, ShieldCheck, CheckCircle2, AlertCircle, UserPlus, Edit3 } from 'lucide-react';
+import { X, Mail, KeyRound, UserCheck, ArrowRight, Loader2, RefreshCw, Lock, Sparkles, ShieldCheck, CheckCircle2, AlertCircle, Edit3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface LoginModalProps {
@@ -48,7 +48,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     setMessage(null);
 
-    const res = await sendOtp(email, { isLogin: true });
+    const res = await sendOtp(email);
     setLoading(false);
 
     if (res.success) {
@@ -245,34 +245,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           {/* Feedback Toast Banner */}
           {message && (
             <div
-              className={`p-3.5 rounded-2xl text-xs font-medium flex flex-col gap-2.5 shadow-lg animate-in slide-in-from-top-2 duration-200 ${
+              className={`p-3.5 rounded-2xl text-xs font-medium flex items-start gap-2.5 shadow-lg animate-in slide-in-from-top-2 duration-200 ${
                 message.type === 'error'
                   ? 'bg-rose-950/70 text-rose-200 border border-rose-800/80 shadow-rose-950/30'
                   : 'bg-emerald-950/70 text-emerald-200 border border-emerald-800/80 shadow-emerald-950/30'
               }`}
             >
-              <div className="flex items-start gap-2.5">
-                {message.type === 'error' ? (
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                )}
-                <div className="leading-snug">{message.text}</div>
-              </div>
-
-              {message.type === 'error' && (message.text.includes('Join Application') || message.text.includes('No registered alumni')) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    navigate('/join');
-                  }}
-                  className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 font-bold rounded-xl text-[11px] transition-colors flex items-center justify-center gap-1.5 self-start mt-1 cursor-pointer"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  Fill Out Join Application Form
-                </button>
+              {message.type === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               )}
+              <span className="min-w-0 leading-relaxed break-words">{message.text}</span>
             </div>
           )}
 
@@ -300,7 +284,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               <div className="flex items-center gap-2 pt-1">
                 <div className="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-800/40 px-2.5 py-1 rounded-lg border border-slate-800">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Secure & Instant</span>
+                  <span>Secure and Instant</span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-800/40 px-2.5 py-1 rounded-lg border border-slate-800">
                   <Lock className="w-3.5 h-3.5 text-indigo-400" />
@@ -436,7 +420,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 ) : (
                   <>
                     <UserCheck className="w-4 h-4" />
-                    <span>Verify Passcode & Sign In</span>
+                    <span>Verify Passcode and Sign In</span>
                   </>
                 )}
               </button>

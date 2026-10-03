@@ -108,23 +108,6 @@ export const AdminAppearanceSettings: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between border border-slate-200 dark:border-slate-700">
-          <div>
-            <div className="font-bold text-slate-900 dark:text-white">Public Join System</div>
-            <div className="text-[11px] text-slate-400">Allow public alumni users to submit self-registration join requests.</div>
-          </div>
-
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.join_enabled}
-              onChange={e => setSettings({ ...settings, join_enabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-          </label>
-        </div>
-
         <div className="flex justify-end pt-2">
           <button
             type="submit"

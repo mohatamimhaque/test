@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getJoinRequests, getJoinRequestsFromSupabase } from '../lib/storage';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { AdminSidebar, AdminTab } from '../components/admin/AdminSidebar';
 import { AdminDashboardOverview } from '../components/admin/AdminDashboardOverview';
 import { AdminMembersManager } from '../components/admin/AdminMembersManager';
-import { AdminJoinRequests } from '../components/admin/AdminJoinRequests';
+import { AdminJoinRequestsManager } from '../components/admin/AdminJoinRequestsManager';
 import { AdminBulkImport } from '../components/admin/AdminBulkImport';
 import { AdminBulkUpdate } from '../components/admin/AdminBulkUpdate';
 import { AdminAdminsManager } from '../components/admin/AdminAdminsManager';
@@ -22,45 +20,6 @@ interface AdminPageProps {
 export const AdminPage: React.FC<AdminPageProps> = ({ onOpenLoginModal }) => {
   const { user, isAdmin, isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(() => 
-    getJoinRequests().filter(r => r.status === 'pending').length
-  );
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      getJoinRequestsFromSupabase().then(reqs => {
-        setPendingRequestsCount(reqs.filter(r => r.status === 'pending').length);
-      }).catch(() => {});
-    };
-    handleUpdate();
-
-    let channel: any = null;
-    if (isSupabaseConfigured && supabase) {
-      channel = supabase
-        .channel('realtime_admin_page_badge')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'cse_archive_join_requests' },
-          () => {
-            handleUpdate();
-          }
-        )
-        .subscribe();
-    }
-
-    window.addEventListener('join_requests_updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    window.addEventListener('focus', handleUpdate);
-
-    return () => {
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
-      window.removeEventListener('join_requests_updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('focus', handleUpdate);
-    };
-  }, []);
 
   if (!isAdmin) {
     return (
@@ -106,14 +65,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onOpenLoginModal }) => {
         <AdminSidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          pendingRequestsCount={pendingRequestsCount}
         />
 
         {/* Tab Content View */}
         <main className="flex-1 min-w-0">
           {activeTab === 'overview' && <AdminDashboardOverview onNavigateTab={setActiveTab} />}
           {activeTab === 'members' && <AdminMembersManager />}
-          {activeTab === 'join_requests' && <AdminJoinRequests />}
+          {activeTab === 'join_requests' && (
+            <AdminJoinRequestsManager onNavigateTab={(tab) => setActiveTab(tab)} />
+          )}
           {activeTab === 'bulk_import' && <AdminBulkImport />}
           {activeTab === 'bulk_update' && <AdminBulkUpdate />}
           {activeTab === 'administrators' && <AdminAdminsManager />}

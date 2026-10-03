@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Member } from '../types';
-import { getMembers, trackPageView } from '../lib/storage';
+import { useMemberDirectory, BLOOD_GROUPS, SORT_OPTIONS, type SortKey } from '../hooks/useMemberDirectory';
 import { MemberCard } from '../components/directory/MemberCard';
 import { FilterBar } from '../components/directory/FilterBar';
 import { Pagination } from '../components/common/Pagination';
@@ -14,77 +14,36 @@ interface DirectoryPageProps {
 
 export const DirectoryPage: React.FC<DirectoryPageProps> = ({ onSelectMember, searchQuerySignal }) => {
   const [searchParams] = useSearchParams();
-  const [members, setMembers] = useState<Member[]>(() => getMembers());
-  
-  const urlQ = searchParams.get('q');
-  const initialQ = urlQ || searchQuerySignal || '';
-  const [searchQuery, setSearchQuery] = useState(initialQ);
-  const [selectedBlood, setSelectedBlood] = useState('');
-  const [selectedSort, setSelectedSort] = useState('name');
-  const [layout, setLayout] = useState<'grid' | 'list'>('grid');
-  const [page, setPage] = useState(1);
-  const pageSize = 12;
+  const urlQ = searchParams.get('q') ?? undefined;
 
-  useEffect(() => {
-    trackPageView('/directory');
-  }, []);
-
-  useEffect(() => {
-    const qFromUrl = searchParams.get('q');
-    if (qFromUrl !== null && qFromUrl !== undefined) {
-      setSearchQuery(qFromUrl);
-      setPage(1);
-    } else if (searchQuerySignal) {
-      setSearchQuery(searchQuerySignal);
-      setPage(1);
-    }
-  }, [searchParams, searchQuerySignal]);
-
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setSelectedBlood('');
-    setSelectedSort('name');
-    setPage(1);
-  };
-
-  // Filter and sort members
-  const filtered = members.filter(m => {
-    if (!m.visible) return false;
-
-    if (selectedBlood && m.blood !== selectedBlood) return false;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = m.name?.toLowerCase().includes(q);
-      const matchStudentId = m.student_id?.toLowerCase().includes(q);
-      const matchEmail = m.email?.toLowerCase().includes(q);
-      const matchCompany = m.organization?.toLowerCase().includes(q);
-      const matchLocation = m.location?.toLowerCase().includes(q);
-      const matchDesignation = m.designation?.toLowerCase().includes(q);
-      return matchName || matchStudentId || matchEmail || matchCompany || matchLocation || matchDesignation;
-    }
-
-    return true;
+  // Shared with the mobile directory so search/filter/sort/pagination
+  // behaviour can never diverge between the two UIs.
+  const directory = useMemberDirectory({
+    urlQuery: urlQ,
+    searchQuerySignal,
+    pageSize: 12,
+    trackView: true,
+    viewPath: '/directory',
+    source: 'desktop',
   });
 
-  const sorted = [...filtered].sort((a, b) => {
-    if (selectedSort === 'name') {
-      return (a.name || '').localeCompare(b.name || '');
-    }
-    if (selectedSort === 'id_asc') {
-      return a.id - b.id;
-    }
-    if (selectedSort === 'id_desc') {
-      return b.id - a.id;
-    }
-    if (selectedSort === 'recent') {
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    }
-    return 0;
-  });
-
-  const totalPages = Math.ceil(sorted.length / pageSize) || 1;
-  const paginatedMembers = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const {
+    searchQuery,
+    setSearchQuery,
+    selectedBlood,
+    setSelectedBlood,
+    selectedSort,
+    setSelectedSort,
+    layout,
+    setLayout,
+    page,
+    setPage,
+    totalResults,
+    totalPages,
+    pageSize,
+    paginatedMembers,
+    resetFilters,
+  } = directory;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -96,7 +55,7 @@ export const DirectoryPage: React.FC<DirectoryPageProps> = ({ onSelectMember, se
             CSE Alumni Member Directory
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Browse, search, and connect with 922 CSE alumni members.
+            Browse, search, and connect with {totalResults ? directory.members.length : 0} CSE alumni members.
           </p>
         </div>
       </div>
@@ -104,15 +63,17 @@ export const DirectoryPage: React.FC<DirectoryPageProps> = ({ onSelectMember, se
       {/* Filter & Search Bar */}
       <FilterBar
         searchQuery={searchQuery}
-        onSearchChange={(q) => { setSearchQuery(q); setPage(1); }}
+        onSearchChange={setSearchQuery}
         selectedBlood={selectedBlood}
-        onBloodChange={(b) => { setSelectedBlood(b); setPage(1); }}
+        onBloodChange={setSelectedBlood}
         selectedSort={selectedSort}
-        onSortChange={setSelectedSort}
+        onSortChange={(sort) => setSelectedSort(sort as SortKey)}
         layout={layout}
         onLayoutChange={setLayout}
-        totalResults={sorted.length}
-        onResetFilters={handleResetFilters}
+        totalResults={totalResults}
+        onResetFilters={resetFilters}
+        bloodGroups={BLOOD_GROUPS}
+        sortOptions={SORT_OPTIONS}
       />
 
       {/* Members Grid / List */}
@@ -135,7 +96,7 @@ export const DirectoryPage: React.FC<DirectoryPageProps> = ({ onSelectMember, se
             No member records match your query "{searchQuery}". Try broadening your search or resetting filters.
           </p>
           <button
-            onClick={handleResetFilters}
+            onClick={resetFilters}
             className="px-4 py-2 text-xs font-bold bg-primary-600 text-white rounded-xl shadow hover:bg-primary-700 transition-colors"
           >
             Reset All Filters
@@ -147,7 +108,7 @@ export const DirectoryPage: React.FC<DirectoryPageProps> = ({ onSelectMember, se
       <Pagination
         currentPage={page}
         totalPages={totalPages}
-        totalItems={sorted.length}
+        totalItems={totalResults}
         pageSize={pageSize}
         onPageChange={setPage}
       />

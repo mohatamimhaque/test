@@ -4,15 +4,15 @@ import {
   Building2, 
   Search, 
   Users, 
-  UserPlus, 
   ShieldCheck, 
   ArrowRight, 
   Sparkles, 
   MapPin, 
   Award, 
-  GraduationCap 
+  GraduationCap,
+  UserPlus
 } from 'lucide-react';
-import { getSiteSettings, getMembers } from '../lib/storage';
+import { getSiteSettings, getPublicMembers } from '../lib/storage';
 import { useAuth } from '../context/AuthContext';
 import { MemberCard } from '../components/directory/MemberCard';
 import { Member } from '../types';
@@ -25,7 +25,8 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ onSelectMember, onOpenLoginModal }) => {
   const { user } = useAuth();
   const settings = getSiteSettings();
-  const members = getMembers();
+  // Public page: approved records only.
+  const members = getPublicMembers();
   const navigate = useNavigate();
 
   const featuredMembers = members.slice(0, 6);
@@ -59,12 +60,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMember, onOpenLoginM
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-xs font-semibold text-primary-200">
             <Sparkles className="w-4 h-4 text-amber-300" />
-            Official Department Alumni Directory & Archive
+            Alumni Directory and Archive
           </div>
 
           <div className="space-y-4">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight font-outfit leading-none bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-primary-200">
-              {settings.header_title || 'Department of Computer Science & Engineering'}
+              {settings.header_title || 'Department of Computer Science and Engineering'}
             </h1>
             <p className="text-lg sm:text-xl font-medium text-slate-300 max-w-3xl mx-auto">
               {settings.description || 'Connecting CSE graduates, faculty, and academic professionals worldwide.'}
@@ -110,19 +111,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMember, onOpenLoginM
               to="/directory"
               className="px-6 py-3 rounded-xl bg-white text-slate-900 font-bold text-xs hover:bg-slate-100 shadow-lg transition-colors flex items-center gap-2"
             >
-              Explore All 922 Alumni
+              Explore All {members.length} Alumni
               <ArrowRight className="w-4 h-4 text-primary-600" />
             </Link>
 
-            {settings.join_enabled && !user && (
-              <Link
-                to="/join"
-                className="px-6 py-3 rounded-xl bg-primary-600/80 hover:bg-primary-600 text-white font-bold text-xs border border-primary-400/40 transition-colors flex items-center gap-2"
-              >
-                <UserPlus className="w-4 h-4" />
-                Join CSE Archive
-              </Link>
-            )}
+            <Link
+              to="/join"
+              className="px-6 py-3 rounded-xl bg-primary-600/20 hover:bg-primary-600/30 text-white font-bold text-xs border border-primary-400/40 backdrop-blur transition-colors flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              Join the Archive
+            </Link>
           </div>
 
         </div>

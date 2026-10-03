@@ -21,7 +21,7 @@ export const AdminStorageManager: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
         <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
           <div className="text-slate-400 font-semibold uppercase tracking-wider">Storage Status</div>
-          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-1">Active & Online</div>
+          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-1">Active and Online</div>
         </div>
 
         <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">

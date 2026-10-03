@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, UserPlus, User, ShieldCheck, Sun, Moon, LogIn } from 'lucide-react';
+import { Home, Users, User, ShieldCheck, Sun, Moon, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -31,15 +31,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenLoginMod
       exact: false,
     },
   ];
-
-  if (!user) {
-    navItems.push({
-      label: 'Join',
-      path: '/join',
-      icon: UserPlus,
-      exact: false,
-    });
-  }
 
   if (user) {
     navItems.push({

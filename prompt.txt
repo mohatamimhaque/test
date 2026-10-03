@@ -1,12 +1,12 @@
-DATABASE_URL=postgresql://neondb_owner:npg_FPqtSI2KUos9@ep-blue-tree-anumhbzm-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://[REDACTED]@ep-blue-tree-anumhbzm-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require
 
 # Admin Authentication
-SESSION_SECRET=duet_reunion_v2_session_secret_2025
-ADMIN_PASSWORD=yadmin123
+SESSION_SECRET=[REDACTED]
+ADMIN_PASSWORD=[REDACTED]
 # Cloudflare R2 (Object Storage)
-R2_ENDPOINT=https://d284e14d88a942f51c8a61cd326b32f8.r2.cloudflarestorage.com
-R2_ACCESS_KEY_ID=16bc7c98614159619a9a87368223d23d
-R2_SECRET_ACCESS_KEY=f493361b3eda19848e02a6d0229cd8d1c29cd124af7802a4cbf48a66775c4efa
+R2_ENDPOINT=https://[REDACTED].r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=[REDACTED]
+R2_SECRET_ACCESS_KEY=[REDACTED]
 R2_BUCKET_NAME=cse-alumni
 
 

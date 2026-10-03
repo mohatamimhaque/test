@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   Users, 
   Eye, 
-  UserPlus, 
   ShieldCheck, 
   HardDrive, 
   Activity, 
@@ -10,7 +9,7 @@ import {
   ArrowUpRight,
   Sparkles
 } from 'lucide-react';
-import { getMembers, getJoinRequests, getAuditLogs, getAnalyticsStats } from '../../lib/storage';
+import { getMembers, getAuditLogs, getAnalyticsStats } from '../../lib/storage';
 
 interface AdminDashboardOverviewProps {
   onNavigateTab: (tab: any) => void;
@@ -18,8 +17,6 @@ interface AdminDashboardOverviewProps {
 
 export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({ onNavigateTab }) => {
   const members = getMembers();
-  const joinRequests = getJoinRequests();
-  const pendingRequests = joinRequests.filter(r => r.status === 'pending');
   const auditLogs = getAuditLogs().slice(0, 8);
   const analytics = getAnalyticsStats();
 
@@ -55,7 +52,7 @@ export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({ 
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         
         <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-2">
           <div className="flex items-center justify-between">
@@ -68,22 +65,6 @@ export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({ 
           <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
             {visibleMembers} active / visible publicly
           </p>
-        </div>
-
-        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Joins</span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-              <UserPlus className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-outfit">{pendingRequests.length}</div>
-          <button
-            onClick={() => onNavigateTab('join_requests')}
-            className="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            Review pending applications &rarr;
-          </button>
         </div>
 
         <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-2">

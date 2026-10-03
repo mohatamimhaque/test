@@ -2,21 +2,22 @@ import React from 'react';
 import { 
   LayoutDashboard, 
   Users, 
-  UserPlus, 
   FileUp, 
   Layers, 
   ShieldCheck, 
   BarChart3, 
   Palette, 
   HardDrive, 
-  ClipboardList 
+  ClipboardList,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getApprovalCounts } from '../../lib/storage';
 
 export type AdminTab = 
   | 'overview' 
   | 'members' 
-  | 'join_requests' 
+  | 'join_requests'
   | 'bulk_import' 
   | 'bulk_update' 
   | 'administrators' 
@@ -28,16 +29,18 @@ export type AdminTab =
 interface AdminSidebarProps {
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
-  pendingRequestsCount: number;
 }
 
-export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, onTabChange, pendingRequestsCount }) => {
+export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, onTabChange }) => {
   const { isSuperAdmin } = useAuth();
+
+  // Pending applications drive the nav badge, so an admin sees the queue at a glance.
+  const pendingCount = getApprovalCounts().pending;
 
   const navItems: { id: AdminTab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number; superAdminOnly?: boolean }[] = [
     { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'members', label: 'Members', icon: Users },
-    { id: 'join_requests', label: 'Join Requests', icon: UserPlus, badge: pendingRequestsCount },
+    { id: 'join_requests', label: 'Join Requests', icon: UserPlus, badge: pendingCount },
     { id: 'bulk_import', label: 'Bulk Import', icon: FileUp },
     { id: 'bulk_update', label: 'Bulk Update', icon: Layers },
     { id: 'administrators', label: 'Administrators', icon: ShieldCheck, superAdminOnly: true },

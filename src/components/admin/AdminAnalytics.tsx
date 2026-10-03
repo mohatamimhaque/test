@@ -1,9 +1,31 @@
 import React, { useState } from 'react';
-import { getAnalyticsStats, getMembers, getPageViews, getMemberViews } from '../../lib/storage';
-import { BarChart3, Eye, Users, Search, Globe, RefreshCcw, Trophy, ArrowUpRight } from 'lucide-react';
+import {
+  getAnalyticsStats,
+  getMembers,
+  getPageViews,
+  getMemberViews,
+  getSearchViews,
+  getSearchAnalytics,
+} from '../../lib/storage';
+import {
+  BarChart3,
+  Eye,
+  Users,
+  Search,
+  Globe,
+  RefreshCcw,
+  Trophy,
+  ArrowUpRight,
+  SearchX,
+  Smartphone,
+  Monitor,
+  TrendingUp,
+} from 'lucide-react';
+
+type AnalyticsTab = 'all' | 'page_views' | 'member_views' | 'searches' | 'most_viewed';
 
 export const AdminAnalytics: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'all' | 'page_views' | 'member_views' | 'most_viewed'>('all');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -11,6 +33,8 @@ export const AdminAnalytics: React.FC = () => {
   const members = getMembers();
   const pageViewsRaw = getPageViews();
   const memberViewsRaw = getMemberViews();
+  const searchesRaw = getSearchViews();
+  const searchInsights = getSearchAnalytics();
 
   // Generate deterministic full unmasked IP addresses
   const getFullIp = (rawIp: string | undefined, hash: string, idx: number) => {
@@ -56,6 +80,33 @@ export const AdminAnalytics: React.FC = () => {
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
+  // Search activity rows, normalized into the same shape as the other logs so
+// the shared filter/table code works across every tab.
+  const searchesList = searchesRaw.map((sv, idx) => ({
+    id: sv.id || idx + 2000,
+    type: 'search' as const,
+    path_or_type: sv.query || '-',
+    member_id: '-',
+    member_name: '-',
+    query: sv.query || '-',
+    results_count: sv.results_count || 0,
+    source: sv.source || 'desktop',
+    filters: sv.filters || '',
+    ip_hash: sv.ip_hash || 'beb78c1bbbd0f840',
+    user_agent: sv.user_agent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/132.0',
+    country: sv.country || 'Bangladesh',
+    city: sv.city || 'Dhaka',
+    ip: getFullIp((sv as any).ip, sv.ip_hash || 'beb78c1bbbd0f840', idx + 90),
+    created_at: sv.created_at || new Date().toISOString(),
+  }));
+
+  // Searches only appear in the combined log when that tab is active, so the
+  // "All" count stays comparable to the traffic totals.
+  const searchesLog = activeTab === 'searches' ? searchesList : [];
+  const combinedWithSearches = [...pageViewsList, ...memberViewsList, ...searchesLog].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   // Calculate Most Viewed Profiles ranking
   const memberCountMap: Record<number, { member: any; views: number; lastViewed: string }> = {};
   for (const mv of memberViewsRaw) {
@@ -90,12 +141,14 @@ export const AdminAnalytics: React.FC = () => {
     );
   });
 
-  const filteredRows = combinedAnalytics.filter(row => {
+  const filteredRows = combinedWithSearches.filter(row => {
     if (activeTab === 'page_views' && row.type !== 'page_view') return false;
     if (activeTab === 'member_views' && row.type !== 'member_view') return false;
+    if (activeTab === 'searches' && row.type !== 'search') return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
+      const isSearchRow = (row as any).type === 'search';
       return (
         row.path_or_type.toLowerCase().includes(q) ||
         row.member_name.toLowerCase().includes(q) ||
@@ -104,25 +157,48 @@ export const AdminAnalytics: React.FC = () => {
         row.ip.toLowerCase().includes(q) ||
         row.user_agent.toLowerCase().includes(q) ||
         row.country.toLowerCase().includes(q) ||
-        row.city.toLowerCase().includes(q)
+        row.city.toLowerCase().includes(q) ||
+        (isSearchRow &&
+          ((row as any).query.toLowerCase().includes(q) ||
+            String((row as any).results_count).includes(q)))
       );
     }
     return true;
   });
 
+  // Searches filtered by the toolbar search box.
+  const filteredSearches = searchesList.filter(row => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      row.query.toLowerCase().includes(q) ||
+      row.city.toLowerCase().includes(q) ||
+      row.country.toLowerCase().includes(q) ||
+      row.ip.toLowerCase().includes(q) ||
+      row.user_agent.toLowerCase().includes(q) ||
+      String(row.results_count).includes(q)
+    );
+  });
+
+  const filteredTopQueries = searchInsights.topQueries.filter((entry) => {
+    if (!searchQuery.trim()) return true;
+    return entry.query.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   // Calculate visitor chart data points
-  const daysMap: Record<string, { pageViews: number; memberViews: number }> = {};
-  for (const row of combinedAnalytics) {
+  const daysMap: Record<string, { pageViews: number; memberViews: number; searches: number }> = {};
+  for (const row of [...combinedAnalytics, ...searchesList]) {
     const dateStr = new Date(row.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     if (!daysMap[dateStr]) {
-      daysMap[dateStr] = { pageViews: 0, memberViews: 0 };
+      daysMap[dateStr] = { pageViews: 0, memberViews: 0, searches: 0 };
     }
     if (row.type === 'page_view') daysMap[dateStr].pageViews++;
+    else if (row.type === 'search') daysMap[dateStr].searches++;
     else daysMap[dateStr].memberViews++;
   }
 
   const chartData = Object.entries(daysMap).slice(0, 7).reverse();
-  const maxVal = Math.max(1, ...chartData.map(([_, d]) => d.pageViews + d.memberViews));
+  const maxVal = Math.max(1, ...chartData.map(([_, d]) => d.pageViews + d.memberViews + d.searches));
 
   return (
     <div className="space-y-6" key={refreshKey}>
@@ -151,7 +227,7 @@ export const AdminAnalytics: React.FC = () => {
           <div className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 font-outfit">
             {pageViewsList.length}
           </div>
-          <p className="text-[11px] text-slate-400 font-medium">Directory & Portal visits</p>
+          <p className="text-[11px] text-slate-400 font-medium">Directory and Portal visits</p>
         </div>
 
         <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-1">
@@ -176,6 +252,120 @@ export const AdminAnalytics: React.FC = () => {
           <p className="text-[11px] text-slate-400 font-medium">Unique profiles viewed</p>
         </div>
 
+        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider">Directory Searches</span>
+            <Search className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-outfit">
+            {searchInsights.totalSearches}
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium">
+            {searchInsights.uniqueQueries} unique queries logged
+          </p>
+        </div>
+
+        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider">Searches With No Results</span>
+            <SearchX className="w-5 h-5 text-rose-500" />
+          </div>
+          <div className="text-3xl font-extrabold text-rose-600 dark:text-rose-400 font-outfit">
+            {searchInsights.noResultSearches}
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium">
+            Avg {searchInsights.averageResults} results per search
+          </p>
+        </div>
+
+        <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-1">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wider">Mobile vs Desktop</span>
+            <TrendingUp className="w-5 h-5 text-violet-500" />
+          </div>
+          <div className="text-3xl font-extrabold text-violet-600 dark:text-violet-400 font-outfit">
+            {searchInsights.mobileSearches}
+            <span className="text-base text-slate-300 dark:text-slate-600 font-bold">/</span>
+            {searchInsights.desktopSearches}
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium">
+            <Smartphone className="inline w-3 h-3 mr-1 align-text-bottom" />
+            mobile <Monitor className="inline w-3 h-3 mx-1 align-text-bottom" />
+            desktop searches
+          </p>
+        </div>
+
+      </div>
+
+      {/* TOP SEARCHED QUERIES LEADERBOARD */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit flex items-center gap-2">
+            <Search className="w-5 h-5 text-emerald-500" />
+            Top Searched Queries
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Most frequent directory searches and how many alumni each one returned.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filteredTopQueries.length === 0 ? (
+            <p className="col-span-full py-6 text-center text-xs text-slate-400">
+              No search analytics matching your search.
+            </p>
+          ) : (
+            filteredTopQueries.slice(0, 12).map((entry, idx) => (
+              <a
+                key={entry.query}
+                href={`/directory?q=${encodeURIComponent(entry.query)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-primary-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group"
+              >
+                <span
+                  className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-extrabold font-mono text-[11px] ${
+                    idx === 0
+                      ? 'bg-emerald-500 text-white'
+                      : idx < 3
+                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                  }`}
+                >
+                  {idx + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                    {entry.query}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {entry.searches} {entry.searches === 1 ? 'search' : 'searches'} · avg {entry.avgResults} results
+                  </p>
+                </div>
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-primary-500 shrink-0" />
+              </a>
+            ))
+          )}
+        </div>
+
+        {searchInsights.noResultQueries.length > 0 && (
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
+              <SearchX className="w-3.5 h-3.5 text-rose-500" />
+              Searches returning zero results
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {searchInsights.noResultQueries.slice(0, 12).map((entry) => (
+                <span
+                  key={entry.query}
+                  className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-[11px] font-semibold"
+                >
+                  {entry.query} <span className="opacity-60">×{entry.searches}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Visual Visitor Graph Section */}
@@ -187,7 +377,7 @@ export const AdminAnalytics: React.FC = () => {
               Visitor Traffic Activity Graph
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Daily distribution of page views vs profile views.
+              Daily distribution of page views, profile views and searches.
             </p>
           </div>
           <div className="flex items-center gap-4 text-xs font-medium">
@@ -201,6 +391,7 @@ export const AdminAnalytics: React.FC = () => {
             </button>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-primary-500" /> Page Views</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-cyan-400" /> Profile Views</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-400" /> Searches</span>
           </div>
         </div>
 
@@ -210,6 +401,7 @@ export const AdminAnalytics: React.FC = () => {
             {chartData.map(([day, counts]) => {
               const pvHeight = Math.max(8, (counts.pageViews / maxVal) * 100);
               const mvHeight = Math.max(8, (counts.memberViews / maxVal) * 100);
+              const svHeight = Math.max(8, ((counts.searches ?? 0) / maxVal) * 100);
 
               return (
                 <div key={day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
@@ -225,6 +417,12 @@ export const AdminAnalytics: React.FC = () => {
                       style={{ height: `${mvHeight}%` }}
                       className="w-full max-w-[28px] bg-cyan-500 dark:bg-cyan-400 rounded-t-lg group-hover:bg-cyan-300 transition-all duration-300 relative shadow-sm"
                       title={`Member Profile Views: ${counts.memberViews}`}
+                    />
+                    {/* Searches Bar */}
+                    <div 
+                      style={{ height: `${svHeight}%` }}
+                      className="w-full max-w-[28px] bg-emerald-500 dark:bg-emerald-400 rounded-t-lg group-hover:bg-emerald-300 transition-all duration-300 relative shadow-sm"
+                      title={`Directory Searches: ${counts.searches ?? 0}`}
                     />
                   </div>
                   <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{day}</span>
@@ -243,12 +441,19 @@ export const AdminAnalytics: React.FC = () => {
             <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit">
               {activeTab === 'most_viewed'
                 ? 'Most Viewed Profiles Leaderboard'
-                : 'Analytics Activity Logs'
+                : activeTab === 'searches'
+                  ? 'Directory Search Activity Logs'
+                  : 'Analytics Activity Logs'
               }
             </h3>
             {activeTab === 'most_viewed' && (
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Ranked list of alumni profile views by frequency.
+              </p>
+            )}
+            {activeTab === 'searches' && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Every recorded directory search with its result count and device type.
               </p>
             )}
           </div>
@@ -299,6 +504,17 @@ export const AdminAnalytics: React.FC = () => {
                 Profile Views ({memberViewsList.length})
               </button>
               <button
+                onClick={() => setActiveTab('searches')}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
+                  activeTab === 'searches'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
+                }`}
+              >
+                <Search className="w-3.5 h-3.5 shrink-0" />
+                <span>Searches ({searchesList.length})</span>
+              </button>
+              <button
                 onClick={() => setActiveTab('most_viewed')}
                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
                   activeTab === 'most_viewed'
@@ -322,7 +538,7 @@ export const AdminAnalytics: React.FC = () => {
                   <th className="py-3 px-4 w-16 text-center">Rank</th>
                   <th className="py-3 px-4">Member Name</th>
                   <th className="py-3 px-4">Student ID</th>
-                  <th className="py-3 px-4">Designation & Organization</th>
+                  <th className="py-3 px-4">Designation and Organization</th>
                   <th className="py-3 px-4 text-center">Total Views</th>
                   <th className="py-3 px-4 text-right">Last Viewed</th>
                 </tr>
@@ -418,6 +634,90 @@ export const AdminAnalytics: React.FC = () => {
               </tbody>
             </table>
           </div>
+        ) : activeTab === 'searches' ? (
+          /* SEARCH ACTIVITY TABLE */
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="py-3 px-3">ID</th>
+                  <th className="py-3 px-3">Search Query</th>
+                  <th className="py-3 px-3 text-center">Results</th>
+                  <th className="py-3 px-3 text-center">Device</th>
+                  <th className="py-3 px-3">Active Filters</th>
+                  <th className="py-3 px-3">IP Address</th>
+                  <th className="py-3 px-3">Location (City / Country)</th>
+                  <th className="py-3 px-3">User Agent</th>
+                  <th className="py-3 px-3 text-right">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                {filteredSearches.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                      No search analytics matching your search.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSearches.slice(0, 50).map(row => (
+                    <tr key={`search-${row.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white font-mono">#{row.id}</td>
+                      <td className="py-2.5 px-3 font-bold font-outfit text-slate-900 dark:text-white">
+                        <a
+                          href={`/directory?q=${encodeURIComponent(row.query)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 max-w-[200px] truncate"
+                          title="Open in Directory"
+                        >
+                          {row.query}
+                          <ArrowUpRight className="w-3 h-3 shrink-0" />
+                        </a>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {row.results_count === 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 font-bold font-mono text-[10px]">
+                            <SearchX className="w-3 h-3" /> 0
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-bold font-mono text-[10px]">
+                            <Eye className="w-3 h-3" /> {row.results_count}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                          row.source === 'mobile'
+                            ? 'bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}>
+                          {row.source === 'mobile' ? (
+                            <Smartphone className="w-3 h-3" />
+                          ) : (
+                            <Monitor className="w-3 h-3" />
+                          )}
+                          {row.source === 'mobile' ? 'Mobile' : 'Desktop'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-[10px] text-slate-400">
+                        {row.filters || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-400">{row.ip}</td>
+                      <td className="py-2.5 px-3">
+                        {row.city}, {row.country}
+                      </td>
+                      <td className="py-2.5 px-3 text-[10px] text-slate-400 truncate max-w-[180px]" title={row.user_agent}>
+                        {row.user_agent}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono text-[10px] text-slate-400">
+                        {new Date(row.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         ) : (
           /* STANDARD LOG TABLE FOR ALL / PAGE VIEWS / PROFILE VIEWS */
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-x-auto">
@@ -444,7 +744,9 @@ export const AdminAnalytics: React.FC = () => {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         row.type === 'page_view'
                           ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-                          : 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300'
+                          : row.type === 'search'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                            : 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300'
                       }`}>
                         {row.type}
                       </span>
@@ -481,7 +783,9 @@ export const AdminAnalytics: React.FC = () => {
         <div className="text-right text-xs text-slate-400">
           {activeTab === 'most_viewed'
             ? `Displaying ${filteredTopProfiles.length} most viewed profiles`
-            : `Displaying ${Math.min(50, filteredRows.length)} of ${filteredRows.length} total logged events`
+            : activeTab === 'searches'
+              ? `Displaying ${Math.min(50, filteredSearches.length)} of ${filteredSearches.length} total logged searches`
+              : `Displaying ${Math.min(50, filteredRows.length)} of ${filteredRows.length} total logged events`
           }
         </div>
 

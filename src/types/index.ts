@@ -1,5 +1,13 @@
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+/**
+ * Admin moderation state for a member record.
+ * - `approved` → visible on the public site (the default for all legacy records)
+ * - `pending`  → submitted via the Join Archive form, awaiting admin review
+ * - `rejected` → declined by an admin, hidden from the public site
+ */
+export type MemberApprovalStatus = 'approved' | 'pending' | 'rejected';
+
 export interface Member {
   id: number;
   legacy_id: number;
@@ -14,6 +22,14 @@ export interface Member {
   photo_key: string;
   photo_url: string;
   visible: boolean;
+  /** Admin moderation state. Absent on legacy rows → treated as `approved`. */
+  approval_status?: MemberApprovalStatus;
+  /** Admin who approved/rejected the record. */
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  /** Why a request was rejected, shown to the applicant. */
+  rejection_reason?: string | null;
+  /** Supabase auth user id that submitted a Join request. */
   auth_user_id?: string | null;
   created_at: string;
   updated_at: string;
@@ -43,31 +59,8 @@ export interface SiteSettings {
   footer_text: string;
   contact_email: string;
   contact_phone: string;
-  join_enabled: boolean;
   updated_at: string;
   updated_by?: string;
-}
-
-export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
-
-export interface JoinRequest {
-  id: string;
-  name: string;
-  email: string;
-  mobile: string;
-  student_id: string;
-  blood: string;
-  designation: string;
-  organization: string;
-  location: string;
-  photo_key: string;
-  photo_url: string;
-  status: JoinRequestStatus;
-  rejection_reason?: string;
-  reviewed_by?: string;
-  reviewed_at?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface AuditLog {
@@ -103,3 +96,61 @@ export interface MemberView {
   city?: string;
   created_at: string;
 }
+
+/** A single directory search, with how many results it returned. */
+export interface SearchView {
+  id: number;
+  /** The raw text the visitor typed. */
+  query: string;
+  /** How many alumni matched (0 for no-match searches). */
+  results_count: number;
+  /** Which UI performed the search. */
+  source: 'mobile' | 'desktop';
+  /** Optional filter context, e.g. `blood=A+&sort=recent`. */
+  filters?: string;
+  ip_hash?: string;
+  user_agent?: string;
+  country?: string;
+  city?: string;
+  created_at: string;
+}
+
+// ============================================================================
+// Join Archive request workflow
+// ============================================================================
+
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
+
+/**
+ * An application to join the archive, staged in
+ * `cse_archive_join_requests` until an admin approves it.
+ * On approval the data is promoted into `cse_archive_members`.
+ */
+export interface JoinRequest {
+  id: number;
+  auth_user_id?: string | null;
+  email: string;
+  /** True once the applicant proved control of `email` via Supabase OTP. */
+  email_verified?: boolean;
+  name: string;
+  mobile?: string;
+  student_id?: string;
+  blood?: string;
+  designation?: string;
+  organization?: string;
+  location?: string;
+  photo_key?: string;
+  photo_url?: string;
+  status: JoinRequestStatus;
+  rejection_reason?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+/** Shape accepted by `submitJoinRequest` (server assigns id/status/timestamps). */
+export type JoinRequestInput = Omit<
+  JoinRequest,
+  'id' | 'status' | 'created_at' | 'updated_at' | 'email_verified' | 'reviewed_by' | 'reviewed_at' | 'rejection_reason'
+>;

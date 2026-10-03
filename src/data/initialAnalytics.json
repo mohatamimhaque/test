@@ -3113,5 +3113,1507 @@
       "created_at": "2026-10-02T14:32:55.593Z"
     }
   ],
-  "memberViews": []
+  "memberViews": [],
+  "searchViews": [
+    {
+      "query": "lecturer",
+      "results_count": 18,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-10-03T03:50:45.601Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 64,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-10-03T02:58:17.127Z"
+    },
+    {
+      "query": "India",
+      "results_count": 46,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-10-03T01:38:32.106Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 35,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-10-02T21:54:50.996Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 14,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-10-02T13:04:51.550Z"
+    },
+    {
+      "query": "noor",
+      "results_count": 8,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-10-02T10:49:55.546Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 192,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-10-02T06:02:40.573Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 19,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-10-02T03:39:01.824Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 10,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-10-02T02:56:58.149Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 24,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-10-02T01:15:21.273Z"
+    },
+    {
+      "query": "Dhaka",
+      "results_count": 158,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-10-02T00:02:15.565Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 29,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-10-01T23:32:37.309Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 19,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-10-01T23:26:43.201Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 34,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-10-01T21:11:22.179Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 59,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-10-01T19:46:28.688Z"
+    },
+    {
+      "query": "rahman",
+      "results_count": 10,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-10-01T18:06:12.272Z"
+    },
+    {
+      "query": "Bangladesh",
+      "results_count": 189,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-10-01T09:45:06.345Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 21,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-10-01T06:20:45.830Z"
+    },
+    {
+      "query": "software",
+      "results_count": 103,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-10-01T06:16:26.422Z"
+    },
+    {
+      "query": "freelance",
+      "results_count": 18,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-30T20:27:13.564Z"
+    },
+    {
+      "query": "founder",
+      "results_count": 13,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-30T20:00:33.156Z"
+    },
+    {
+      "query": "India",
+      "results_count": 39,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-30T18:11:44.107Z"
+    },
+    {
+      "query": "freelance",
+      "results_count": 23,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-30T16:07:48.375Z"
+    },
+    {
+      "query": "developer",
+      "results_count": 80,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-30T12:24:32.320Z"
+    },
+    {
+      "query": "O+",
+      "results_count": 44,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-30T12:23:40.085Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 20,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-30T11:10:03.555Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 60,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-30T10:34:57.435Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 78,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-30T09:45:33.783Z"
+    },
+    {
+      "query": "Dhaka",
+      "results_count": 141,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-30T09:04:04.193Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 54,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-30T07:56:00.341Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 14,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-30T07:03:26.063Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 25,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-30T03:24:24.801Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 25,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-30T00:01:48.178Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 26,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-29T19:34:11.498Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 20,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-29T19:20:37.190Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 17,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-29T15:56:26.590Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 56,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-29T14:54:09.652Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 18,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-29T14:08:20.455Z"
+    },
+    {
+      "query": "researcher",
+      "results_count": 16,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-29T12:08:59.817Z"
+    },
+    {
+      "query": "O+",
+      "results_count": 42,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-29T10:53:12.497Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 9,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-29T10:37:17.057Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 21,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-29T08:52:04.572Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 21,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-29T03:23:30.769Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 73,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-29T01:47:57.842Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 62,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-29T00:21:54.631Z"
+    },
+    {
+      "query": "A+",
+      "results_count": 50,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-28T21:31:38.520Z"
+    },
+    {
+      "query": "Dhaka",
+      "results_count": 153,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-28T17:28:55.346Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 75,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-28T15:48:03.026Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 19,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-28T09:55:38.045Z"
+    },
+    {
+      "query": "B+",
+      "results_count": 28,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-28T08:55:12.248Z"
+    },
+    {
+      "query": "B+",
+      "results_count": 26,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-28T08:46:35.451Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 61,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-28T08:10:02.381Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 21,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-28T07:36:06.051Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 32,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-28T05:28:57.638Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 69,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-27T23:29:42.601Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 60,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-27T22:30:56.443Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 35,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-27T21:25:25.672Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 59,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-27T20:32:00.006Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 215,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-27T18:02:57.773Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 77,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-27T15:50:15.150Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 78,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-27T13:24:53.482Z"
+    },
+    {
+      "query": "freelance",
+      "results_count": 21,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-27T09:46:48.745Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 225,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-27T08:50:32.261Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 32,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-27T07:30:43.311Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 74,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-27T04:13:22.620Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 10,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-27T02:12:44.724Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 35,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-27T02:01:16.623Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 67,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-26T21:13:05.269Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 45,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-26T20:35:04.384Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 47,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-26T19:14:26.478Z"
+    },
+    {
+      "query": "noor",
+      "results_count": 7,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-26T13:06:30.571Z"
+    },
+    {
+      "query": "rahman",
+      "results_count": 10,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-26T09:30:47.578Z"
+    },
+    {
+      "query": "noor",
+      "results_count": 7,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-26T09:19:40.674Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 58,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-26T07:00:56.264Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 56,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-26T06:03:19.032Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 12,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-26T00:51:31.244Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 219,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-26T00:12:18.982Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 68,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-25T22:19:58.561Z"
+    },
+    {
+      "query": "O+",
+      "results_count": 40,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-25T21:48:38.792Z"
+    },
+    {
+      "query": "O+",
+      "results_count": 41,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-25T18:49:27.463Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 23,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-25T15:40:58.566Z"
+    },
+    {
+      "query": "B+",
+      "results_count": 33,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-25T11:42:42.946Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 37,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-25T11:33:07.462Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 18,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-25T09:46:16.527Z"
+    },
+    {
+      "query": "A+",
+      "results_count": 53,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-25T09:34:39.630Z"
+    },
+    {
+      "query": "researcher",
+      "results_count": 17,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-25T08:57:21.427Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 32,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-25T02:49:25.231Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 53,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-24T18:04:05.344Z"
+    },
+    {
+      "query": "A+",
+      "results_count": 46,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-24T16:12:52.587Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 31,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-24T14:28:29.164Z"
+    },
+    {
+      "query": "Canada",
+      "results_count": 36,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-24T02:59:14.744Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 61,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-24T02:25:07.599Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 13,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-24T01:32:02.031Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 57,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-23T23:30:01.475Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 10,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-23T19:46:47.186Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 45,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-23T19:22:57.487Z"
+    },
+    {
+      "query": "abroad",
+      "results_count": 73,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-23T18:27:57.139Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 9,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-23T17:57:17.600Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 53,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-23T16:55:34.370Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 66,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-23T13:09:43.453Z"
+    },
+    {
+      "query": "O+",
+      "results_count": 42,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-23T12:26:40.798Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 20,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-23T12:04:53.665Z"
+    },
+    {
+      "query": "Dhaka",
+      "results_count": 134,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-23T05:45:16.823Z"
+    },
+    {
+      "query": "India",
+      "results_count": 44,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-23T04:28:38.283Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 53,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-23T04:27:21.354Z"
+    },
+    {
+      "query": "researcher",
+      "results_count": 16,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-23T04:01:04.792Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 8,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-23T02:50:42.746Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 28,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-22T22:29:53.347Z"
+    },
+    {
+      "query": "USA engineer",
+      "results_count": 8,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-22T21:20:10.666Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 13,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-22T20:52:14.249Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 213,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-22T19:43:01.705Z"
+    },
+    {
+      "query": "Bangladesh",
+      "results_count": 190,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-22T17:48:02.669Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 18,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-22T17:24:01.578Z"
+    },
+    {
+      "query": "O+",
+      "results_count": 42,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-22T16:51:55.847Z"
+    },
+    {
+      "query": "noor",
+      "results_count": 8,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-22T16:04:32.310Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 19,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-22T15:41:57.737Z"
+    },
+    {
+      "query": "manager",
+      "results_count": 69,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-22T15:09:52.438Z"
+    },
+    {
+      "query": "freelance",
+      "results_count": 21,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-22T13:34:43.448Z"
+    },
+    {
+      "query": "developer",
+      "results_count": 91,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-22T10:52:09.952Z"
+    },
+    {
+      "query": "freelance",
+      "results_count": 21,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-22T07:32:27.986Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 24,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-22T06:57:18.261Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 61,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-22T06:26:04.872Z"
+    },
+    {
+      "query": "rahman",
+      "results_count": 10,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-22T04:45:14.860Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 16,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-22T01:59:30.413Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 13,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-22T00:49:30.573Z"
+    },
+    {
+      "query": "Bangladesh",
+      "results_count": 172,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-21T20:36:05.584Z"
+    },
+    {
+      "query": "B+",
+      "results_count": 30,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Canada",
+      "city": "Toronto",
+      "created_at": "2026-09-21T18:14:55.249Z"
+    },
+    {
+      "query": "freelance",
+      "results_count": 19,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-21T14:14:18.246Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 17,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-21T10:51:30.304Z"
+    },
+    {
+      "query": "analyst",
+      "results_count": 46,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-21T08:58:50.704Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 21,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-21T07:20:38.585Z"
+    },
+    {
+      "query": "A+",
+      "results_count": 47,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-21T06:33:50.918Z"
+    },
+    {
+      "query": "founder",
+      "results_count": 13,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-21T05:17:07.871Z"
+    },
+    {
+      "query": "lecturer",
+      "results_count": 18,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-20T20:06:52.496Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 213,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-20T17:56:35.655Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 18,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-20T14:57:47.794Z"
+    },
+    {
+      "query": "B+",
+      "results_count": 31,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-20T13:24:04.888Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 27,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-20T12:08:58.777Z"
+    },
+    {
+      "query": "engineer",
+      "results_count": 202,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Arab Emirates",
+      "city": "Dubai",
+      "created_at": "2026-09-20T12:03:33.003Z"
+    },
+    {
+      "query": "developer",
+      "results_count": 85,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-20T06:48:13.140Z"
+    },
+    {
+      "query": "Bangladesh",
+      "results_count": 194,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-20T06:41:41.217Z"
+    },
+    {
+      "query": "architect",
+      "results_count": 15,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-20T04:17:20.976Z"
+    },
+    {
+      "query": "Australia",
+      "results_count": 27,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-20T03:57:59.480Z"
+    },
+    {
+      "query": "A+",
+      "results_count": 48,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United States",
+      "city": "New York",
+      "created_at": "2026-09-20T00:41:04.642Z"
+    },
+    {
+      "query": "teacher",
+      "results_count": 23,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-20T00:16:26.745Z"
+    },
+    {
+      "query": "USA",
+      "results_count": 52,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-19T22:23:56.010Z"
+    },
+    {
+      "query": "B-",
+      "results_count": 20,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Australia",
+      "city": "Sydney",
+      "created_at": "2026-09-19T20:11:08.016Z"
+    },
+    {
+      "query": "noor",
+      "results_count": 7,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "created_at": "2026-09-19T15:53:10.389Z"
+    },
+    {
+      "query": "Bangladesh",
+      "results_count": 192,
+      "source": "desktop",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "Bangladesh",
+      "city": "Chittagong",
+      "created_at": "2026-09-19T15:30:03.300Z"
+    },
+    {
+      "query": "Bangladesh",
+      "results_count": 195,
+      "source": "mobile",
+      "ip_hash": "beb78c1bbbd0f840",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0 Safari/537.36",
+      "country": "United Kingdom",
+      "city": "London",
+      "created_at": "2026-09-19T12:40:43.173Z"
+    }
+  ]
 }

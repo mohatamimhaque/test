@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Member, AdminUser, JoinRequest } from '../types';
-import { getMemberByEmail, getAdminByEmail, getJoinRequests } from '../lib/storage';
+import { Member, AdminUser } from '../types';
+import { getMemberByEmail, getAdminByEmail } from '../lib/storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthUser {
@@ -15,8 +15,15 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   loading: boolean;
-  sendOtp: (email: string, options?: { isLogin?: boolean }) => Promise<{ success: boolean; message?: string }>;
+  sendOtp: (email: string) => Promise<{ success: boolean; message?: string }>;
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; message?: string }>;
+  /** Join-archive OTP: sends a code to an address with no existing account. */
+  sendJoinOtp: (email: string) => Promise<{ success: boolean; message?: string }>;
+  /** Verifies a join code without establishing a login session. */
+  verifyJoinOtp: (
+    email: string,
+    otp: string
+  ) => Promise<{ success: boolean; message?: string; authUserId?: string | null }>;
   loginAsDemo: (role: 'super_admin' | 'admin' | 'member', memberEmail?: string) => void;
   logout: () => Promise<void>;
   refreshAuth: () => void;
@@ -85,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendOtp = async (email: string, options: { isLogin?: boolean } = { isLogin: true }) => {
+  const sendOtp = async (email: string) => {
     const cleanEmail = (email || '').toLowerCase().trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       return { success: false, message: 'Please enter a valid email address.' };
@@ -94,67 +101,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const member = getMemberByEmail(cleanEmail);
     const admin = getAdminByEmail(cleanEmail);
     const isSuperAdmin = cleanEmail === 'mohatamimhaque@outlook.com';
-    const requests = getJoinRequests();
-    let joinReq = requests.find(r => r.email && r.email.toLowerCase().trim() === cleanEmail);
 
-    if (isSupabaseConfigured && supabase) {
-      const { data: dbReq } = await supabase
-        .from('cse_archive_join_requests')
-        .select('*')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-      if (dbReq) {
-        joinReq = dbReq as JoinRequest;
-      }
-    }
-
-    if (options.isLogin) {
-      // --- SIGN-IN / LOGIN FLOW ---
-      if (!member && !admin && !isSuperAdmin) {
-        if (joinReq) {
-          if (joinReq.status === 'pending') {
-            return {
-              success: false,
-              message: `Your join application for ${cleanEmail} is pending administrator review. Once approved, you will be able to sign in.`
-            };
-          }
-          if (joinReq.status === 'rejected') {
-            return {
-              success: false,
-              message: `Your join application for ${cleanEmail} was reviewed and rejected by an administrator.${joinReq.rejection_reason ? ` Reason: ${joinReq.rejection_reason}` : ''} Please submit a new Join Application.`
-            };
-          }
-        }
-
-        return {
-          success: false,
-          message: `No registered alumni profile or account was found for ${cleanEmail}. Please submit your Join Application form first.`
-        };
-      }
-    } else {
-      // --- JOIN APPLICATION FLOW ---
-      if (member) {
-        return {
-          success: false,
-          message: `An alumni profile already exists for ${cleanEmail}. Please sign in to your member dashboard instead.`
-        };
-      }
-
-      if (joinReq) {
-        if (joinReq.status === 'pending') {
-          return {
-            success: false,
-            message: `A join application for ${cleanEmail} is already submitted and pending administrator review.`
-          };
-        }
-        if (joinReq.status === 'approved') {
-          return {
-            success: false,
-            message: `Your join application for ${cleanEmail} has already been approved! Please sign in to your profile.`
-          };
-        }
-      }
+    if (!member && !admin && !isSuperAdmin) {
+      return {
+        success: false,
+        message: `No registered alumni profile or account was found for ${cleanEmail}.`
+      };
     }
 
     // Email check passed! Proceed to send 8-digit OTP
@@ -193,6 +145,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, message: 'Invalid OTP code. Use 12345678' };
   };
 
+  /**
+   * Join-archive variant of sendOtp.
+   *
+   * Unlike `sendOtp` this does NOT require an existing member/admin record —
+   * that is the whole point, since applicants are by definition new. It only
+   * sends a code to an address the applicant is trying to claim.
+   */
+  const sendJoinOtp = async (email: string) => {
+    const cleanEmail = (email || '').toLowerCase().trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Please enter a valid email address.' };
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.signInWithOtp({ email: cleanEmail });
+      if (error) return { success: false, message: error.message };
+      return { success: true, message: 'Verification code sent. Check your inbox.' };
+    }
+
+    return { success: true, message: 'Simulation mode: use code 12345678' };
+  };
+
+  /**
+   * Verifies a join-archive code WITHOUT creating a login session.
+   *
+   * Deliberately separate from `verifyOtp`: verifying an application must not
+   * sign the applicant in, because no member record exists yet. Returns the
+   * auth user id so it can be attached to the submitted request.
+   */
+  const verifyJoinOtp = async (
+    email: string,
+    otp: string
+  ): Promise<{ success: boolean; message?: string; authUserId?: string | null }> => {
+    const cleanEmail = (email || '').toLowerCase().trim();
+    const cleanOtp = (otp || '').trim();
+
+    if (!cleanOtp) {
+      return { success: false, message: 'Please enter the verification code.' };
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanOtp,
+        type: 'email',
+      });
+
+      if (error) return { success: false, message: error.message };
+      if (!data.user) return { success: false, message: 'Verification failed.' };
+
+      return { success: true, authUserId: data.user.id };
+    }
+
+    // Simulation mode: accept any 4+ digit code.
+    if (cleanOtp.length >= 4) {
+      return { success: true, authUserId: `sim-${Date.now()}` };
+    }
+    return { success: false, message: 'Invalid code. Use 12345678 in simulation mode.' };
+  };
+
   const loginAsDemo = (role: 'super_admin' | 'admin' | 'member', memberEmail?: string) => {
     let email = 'admin@cse-archive.edu';
     if (role === 'admin') email = 'moderator@cse-archive.edu';
@@ -227,6 +239,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         sendOtp,
         verifyOtp,
+        sendJoinOtp,
+        verifyJoinOtp,
         loginAsDemo,
         logout,
         refreshAuth,

@@ -10,7 +10,6 @@ import {
   User, 
   LogOut, 
   LogIn, 
-  UserPlus, 
   Menu, 
   X,
   Layers
@@ -92,20 +91,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchQueryChange, onOpenLogin
             Directory
           </Link>
 
-          {settings.join_enabled && !user && (
-            <Link
-              to="/join"
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                location.pathname === '/join'
-                  ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/50'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              <UserPlus className="w-4 h-4" />
-              Join Archive
-            </Link>
-          )}
-
           {isAdmin && (
             <Link
               to="/admin"
@@ -120,6 +105,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchQueryChange, onOpenLogin
               {isSuperAdmin && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white font-extrabold uppercase tracking-wider">Super</span>}
             </Link>
           )}
+
+          <Link
+            to="/join"
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              location.pathname === '/join'
+                ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/50'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            Join Archive
+          </Link>
 
           {/* Theme Dropdown Toggle */}
           <div className="relative">
@@ -255,15 +251,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchQueryChange, onOpenLogin
             Directory
           </Link>
 
-          {settings.join_enabled && !user && (
-            <Link
-              to="/join"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              Join Archive
-            </Link>
-          )}
+          <Link
+            to="/join"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            Join Archive
+          </Link>
 
           {isAdmin && (
             <Link

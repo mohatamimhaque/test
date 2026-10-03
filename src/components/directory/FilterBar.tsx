@@ -1,5 +1,10 @@
 import React from 'react';
-import { Search, Filter, LayoutGrid, List, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { Search, LayoutGrid, List, RotateCcw } from 'lucide-react';
+
+interface SortOption {
+  value: string;
+  label: string;
+}
 
 interface FilterBarProps {
   searchQuery: string;
@@ -12,9 +17,20 @@ interface FilterBarProps {
   onLayoutChange: (layout: 'grid' | 'list') => void;
   totalResults: number;
   onResetFilters: () => void;
+  /** Blood group options (shared with the mobile UI). */
+  bloodGroups?: readonly string[];
+  /** Sort options (shared with the mobile UI). */
+  sortOptions?: SortOption[];
 }
 
-const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+const DEFAULT_BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+const DEFAULT_SORT_OPTIONS: SortOption[] = [
+  { value: 'name', label: 'Sort by Name (A-Z)' },
+  { value: 'id_asc', label: 'Sort by ID (Ascending)' },
+  { value: 'id_desc', label: 'Sort by ID (Descending)' },
+  { value: 'recent', label: 'Recently Updated' },
+];
 
 export const FilterBar: React.FC<FilterBarProps> = ({
   searchQuery,
@@ -27,6 +43,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onLayoutChange,
   totalResults,
   onResetFilters,
+  bloodGroups = DEFAULT_BLOOD_GROUPS,
+  sortOptions = DEFAULT_SORT_OPTIONS,
 }) => {
   const hasActiveFilters = Boolean(searchQuery || selectedBlood || selectedSort !== 'name');
 
@@ -56,7 +74,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="w-full sm:w-auto px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-200 truncate"
           >
             <option value="">All Blood Groups</option>
-            {BLOOD_GROUPS.map(b => (
+            {bloodGroups.map(b => (
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
@@ -67,10 +85,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onChange={(e) => onSortChange(e.target.value)}
             className="w-full sm:w-auto px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-200 truncate"
           >
-            <option value="name">Sort by Name (A-Z)</option>
-            <option value="id_asc">Sort by ID (Ascending)</option>
-            <option value="id_desc">Sort by ID (Descending)</option>
-            <option value="recent">Recently Updated</option>
+            {sortOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
 
           {/* Layout Toggle Buttons */}

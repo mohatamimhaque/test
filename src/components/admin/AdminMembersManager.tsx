@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Member } from '../../types';
-import { getMembers, updateMember, createMember, deleteMember } from '../../lib/storage';
+import { getMembers, updateMember, createMember, deleteMember, normalizeApproval } from '../../lib/storage';
 import { getPhotoUrl, processPhotoUpload, getDefaultAvatar } from '../../lib/r2';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -188,10 +188,11 @@ export const AdminMembersManager: React.FC = () => {
               <tr>
                 <th className="py-3 px-4">Member</th>
                 <th className="py-3 px-4">Student ID</th>
-                <th className="py-3 px-4">Designation & Org</th>
+                <th className="py-3 px-4">Designation and Org</th>
                 <th className="py-3 px-4">Contact</th>
                 <th className="py-3 px-4">Blood</th>
-                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-center">Approval</th>
+                <th className="py-3 px-4">Visibility</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -256,6 +257,27 @@ export const AdminMembersManager: React.FC = () => {
                         ) : '-'}
                       </td>
 
+                      <td className="py-3 px-4 text-center">
+                        {(() => {
+                          const status = normalizeApproval(m.approval_status);
+                          const styles: Record<string, string> = {
+                            approved:
+                              'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+                            pending:
+                              'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+                            rejected:
+                              'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+                          };
+                          return (
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${styles[status]}`}
+                            >
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                          );
+                        })()}
+                      </td>
+
                       <td className="py-3 px-4">
                         <button
                           onClick={() => handleToggleVisibility(m)}
@@ -291,7 +313,7 @@ export const AdminMembersManager: React.FC = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={8} className="py-8 text-center text-slate-400">
                     No member records found matching your search.
                   </td>
                 </tr>

@@ -1,4 +1,16 @@
-import { Member, SiteSettings, JoinRequest, AdminUser, AuditLog, PageView, MemberView } from '../types';
+import {
+  Member,
+  MemberApprovalStatus,
+  JoinRequest,
+  JoinRequestInput,
+  JoinRequestStatus,
+  SiteSettings,
+  AdminUser,
+  AuditLog,
+  PageView,
+  MemberView,
+  SearchView,
+} from '../types';
 import initialMembersRaw from '../data/initialMembers.json';
 import initialAnalyticsRaw from '../data/initialAnalytics.json';
 import { supabase, isSupabaseConfigured } from './supabase';
@@ -10,21 +22,77 @@ const STORAGE_KEYS = {
   AUDIT_LOGS: 'cse_archive_audit_logs_v1',
   PAGE_VIEWS: 'cse_archive_page_views_v1',
   MEMBER_VIEWS: 'cse_archive_member_views_v1',
+  SEARCH_VIEWS: 'cse_archive_search_views_v1',
+  JOIN_REQUESTS: 'cse_archive_join_requests_v1',
 };
 
 const DEFAULT_SETTINGS: SiteSettings = {
   id: 1,
   title: 'CSE Archive',
-  subtitle: 'Alumni & Directory System',
-  header_title: 'Department of Computer Science & Engineering',
-  description: 'Official Archive & Member Directory for CSE Alumni, Faculty, and Students.',
+  subtitle: 'Alumni and Directory System',
+  header_title: 'Department of Computer Science and Engineering',
+  description: 'Archive and Member Directory for CSE Alumni, Faculty, and Students.',
   logo_url: '',
-  footer_text: '© 2026 Department of Computer Science & Engineering. All rights reserved.',
+  footer_text: '© 2026 Department of Computer Science and Engineering. All rights reserved.',
   contact_email: 'alumni@cse-archive.edu',
   contact_phone: '+880 1700 000000',
-  join_enabled: true,
   updated_at: new Date().toISOString(),
 };
+
+/**
+ * One-time copy cleanup.
+ *
+ * Site settings persist in localStorage, so editing DEFAULT_SETTINGS alone
+ * would leave existing installs showing the previous wording forever. This
+ * rewrites only values that still match a known previous default, which means
+ * any wording an admin has customised by hand is left untouched.
+ */
+const SETTINGS_COPY_MIGRATIONS: { from: string; to: string }[] = [
+  { from: 'Department of Computer Science & Engineering', to: 'Department of Computer Science and Engineering' },
+  {
+    from: 'Official Archive & Member Directory for CSE Alumni, Faculty, and Students.',
+    to: 'Archive and Member Directory for CSE Alumni, Faculty, and Students.',
+  },
+  {
+    from: 'Alumni & Directory System',
+    to: 'Alumni and Directory System',
+  },
+  {
+    from: '© 2026 Department of Computer Science & Engineering. All rights reserved.',
+    to: '© 2026 Department of Computer Science and Engineering. All rights reserved.',
+  },
+];
+
+const COPY_MIGRATION_KEY = 'cse_archive_copy_migration_v1';
+
+function migrateSettingsCopy(): void {
+  try {
+    if (localStorage.getItem(COPY_MIGRATION_KEY)) return;
+
+    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (raw) {
+      const settings = JSON.parse(raw) as SiteSettings;
+      let changed = false;
+
+      for (const field of ['header_title', 'description', 'subtitle', 'footer_text'] as const) {
+        const current = settings[field];
+        const migration = SETTINGS_COPY_MIGRATIONS.find((m) => m.from === current);
+        if (migration) {
+          settings[field] = migration.to;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+      }
+    }
+
+    localStorage.setItem(COPY_MIGRATION_KEY, new Date().toISOString());
+  } catch (err) {
+    console.error('Settings copy migration failed:', err);
+  }
+}
 
 const DEFAULT_ADMINS: AdminUser[] = [
   {
@@ -61,6 +129,9 @@ function setLocal<T>(key: string, value: T): void {
 
 // INITIALIZE SEED DATA ONCE
 export function initStorage(): void {
+  // Keep previously-seeded site copy in sync with DEFAULT_SETTINGS.
+  migrateSettingsCopy();
+
   if (!localStorage.getItem(STORAGE_KEYS.MEMBERS)) {
     const members = initialMembersRaw as Member[];
     setLocal(STORAGE_KEYS.MEMBERS, members);
@@ -96,9 +167,37 @@ export function initStorage(): void {
   if (!localStorage.getItem(STORAGE_KEYS.MEMBER_VIEWS)) {
     setLocal(STORAGE_KEYS.MEMBER_VIEWS, initialAnalyticsRaw.memberViews || []);
   }
+
+  if (!localStorage.getItem(STORAGE_KEYS.SEARCH_VIEWS)) {
+    setLocal(STORAGE_KEYS.SEARCH_VIEWS, (initialAnalyticsRaw as any).searchViews || []);
+  }
+
+  if (!localStorage.getItem(STORAGE_KEYS.JOIN_REQUESTS)) {
+    setLocal(STORAGE_KEYS.JOIN_REQUESTS, []);
+  }
 }
 
 // MEMBER MANAGEMENT
+/**
+ * Records created before the approval workflow existed have no
+ * `approval_status`. They are all part of the legacy archive, so they default
+ * to 'approved' — which keeps the public site behaving exactly as before.
+ */
+export function normalizeApproval(status?: string | null): MemberApprovalStatus {
+  if (status === 'pending' || status === 'rejected' || status === 'approved') return status;
+  return 'approved';
+}
+
+/** Public-safe view of a member: only admins ever need pending/rejected rows. */
+export function isPublicMember(m: Member): boolean {
+  return normalizeApproval(m.approval_status) === 'approved';
+}
+
+function getMembersLocal(): Member[] {
+  const members = getLocal<Member[]>(STORAGE_KEYS.MEMBERS, []);
+  return members.map((m) => ({ ...m, approval_status: normalizeApproval(m.approval_status) }));
+}
+
 export async function getMembersFromSupabase(): Promise<Member[]> {
   initStorage();
   if (isSupabaseConfigured && supabase) {
@@ -109,22 +208,38 @@ export async function getMembersFromSupabase(): Promise<Member[]> {
         .order('id', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        setLocal(STORAGE_KEYS.MEMBERS, data as Member[]);
-        return data as Member[];
+        // Rows created before the approval column existed come back without it.
+        // Normalise so the rest of the app can treat `approval_status` as
+        // always present, defaulting the legacy archive to 'approved'.
+        const normalized = (data as Member[]).map((m) => ({
+          ...m,
+          approval_status: normalizeApproval(m.approval_status),
+        }));
+        setLocal(STORAGE_KEYS.MEMBERS, normalized);
+        return normalized;
       }
     } catch (err) {
       console.error('Error fetching members from Supabase:', err);
     }
   }
-  return getLocal<Member[]>(STORAGE_KEYS.MEMBERS, []);
+  return getMembersLocal();
 }
 
+/** Every member row, including pending/rejected. Admin surfaces use this. */
 export function getMembers(): Member[] {
   initStorage();
   if (isSupabaseConfigured && supabase) {
     getMembersFromSupabase().catch(() => {});
   }
-  return getLocal<Member[]>(STORAGE_KEYS.MEMBERS, []);
+  return getMembersLocal();
+}
+
+/**
+ * Public directory data: approved records only.
+ * Every non-admin page must use this so pending/rejected members never leak.
+ */
+export function getPublicMembers(): Member[] {
+  return getMembers().filter(isPublicMember);
 }
 
 export function saveMembers(members: Member[]): void {
@@ -135,44 +250,16 @@ export function getMemberById(id: number): Member | undefined {
   return getMembers().find(m => m.id === id);
 }
 
+/**
+ * Looks a member up by email for the self-service portal.
+ * A member whose own request is still pending can sign in and see the status,
+ * so this deliberately searches ALL rows rather than only approved ones.
+ */
 export function getMemberByEmail(email: string): Member | undefined {
   if (!email) return undefined;
   const cleanEmail = email.toLowerCase().trim();
   const members = getMembers();
-  let found = members.find(m => m.email && m.email.toLowerCase().trim() === cleanEmail);
-
-  if (!found) {
-    // Check if there is an approved join request for this email
-    const requests = getJoinRequests();
-    const approvedReq = requests.find(r => r.email && r.email.toLowerCase().trim() === cleanEmail && r.status === 'approved');
-    if (approvedReq) {
-      const maxId = members.reduce((max, m) => Math.max(max, m.id || 0), 0);
-      const nextId = maxId + 1;
-
-      found = {
-        id: nextId,
-        legacy_id: nextId,
-        name: approvedReq.name,
-        email: approvedReq.email,
-        mobile: approvedReq.mobile,
-        student_id: approvedReq.student_id,
-        blood: approvedReq.blood,
-        designation: approvedReq.designation,
-        organization: approvedReq.organization,
-        location: approvedReq.location,
-        photo_key: approvedReq.photo_key,
-        photo_url: approvedReq.photo_url,
-        visible: true,
-        created_at: approvedReq.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      members.unshift(found);
-      saveMembers(members);
-    }
-  }
-
-  return found;
+  return members.find(m => m.email && m.email.toLowerCase().trim() === cleanEmail);
 }
 
 export function updateMember(id: number, updates: Partial<Member>, actorEmail?: string): Member {
@@ -204,6 +291,11 @@ export function updateMember(id: number, updates: Partial<Member>, actorEmail?: 
         photo_key: updated.photo_key,
         photo_url: updated.photo_url,
         visible: updated.visible,
+        approval_status: normalizeApproval(updated.approval_status),
+        reviewed_by: updated.reviewed_by ?? null,
+        reviewed_at: updated.reviewed_at ?? null,
+        rejection_reason: updated.rejection_reason ?? null,
+        auth_user_id: updated.auth_user_id ?? null,
         updated_at: updated.updated_at,
       })
       .eq('id', id)
@@ -265,6 +357,11 @@ export function createMember(newMember: Omit<Member, 'id' | 'legacy_id' | 'creat
         photo_key: created.photo_key,
         photo_url: created.photo_url,
         visible: created.visible,
+        approval_status: normalizeApproval(created.approval_status),
+        reviewed_by: created.reviewed_by ?? null,
+        reviewed_at: created.reviewed_at ?? null,
+        rejection_reason: created.rejection_reason ?? null,
+        auth_user_id: created.auth_user_id ?? null,
         created_at: created.created_at,
         updated_at: created.updated_at,
       })
@@ -309,6 +406,297 @@ export function deleteMember(id: number, actorEmail?: string): void {
   });
 }
 
+// JOIN REQUESTS / ADMIN APPROVAL WORKFLOW
+const JOIN_TABLE = 'cse_archive_join_requests';
+
+/**
+ * Submits a new Join Archive application.
+ *
+ * The caller must have already verified ownership of `email` via the Supabase
+ * 8-digit OTP; `emailVerified` is persisted so admins can see it was checked.
+ * Writes to Supabase (authoritative) and mirrors into localStorage as a cache
+ * so the admin list still renders if Supabase is unreachable.
+ */
+export async function submitJoinRequest(
+  payload: JoinRequestInput,
+  options: { emailVerified: boolean; authUserId?: string | null }
+): Promise<{ success: boolean; message?: string }> {
+  initStorage();
+
+  const email = (payload.email || '').toLowerCase().trim();
+  const name = (payload.name || '').trim();
+
+  if (!email || !email.includes('@')) {
+    return { success: false, message: 'A valid email address is required.' };
+  }
+  if (!name) {
+    return { success: false, message: 'Full name is required.' };
+  }
+
+  // Guard against duplicates against both the live archive and the staging table.
+  const existing = getMemberByEmail(email);
+  if (existing) {
+    const status = normalizeApproval(existing.approval_status);
+    if (status === 'approved') {
+      return { success: false, message: 'This email is already a member of the archive.' };
+    }
+    if (status === 'pending') {
+      return { success: false, message: 'A request from this email is already awaiting review.' };
+    }
+  }
+
+  const pending = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []).find(
+    (r) => r.email.toLowerCase().trim() === email && r.status === 'pending'
+  );
+  if (pending) {
+    return { success: false, message: 'A request from this email is already awaiting review.' };
+  }
+
+  const row = {
+    auth_user_id: options.authUserId ?? null,
+    email,
+    email_verified: options.emailVerified,
+    name,
+    mobile: payload.mobile ?? '',
+    student_id: payload.student_id ?? '',
+    blood: payload.blood ?? '',
+    designation: payload.designation ?? '',
+    organization: payload.organization ?? '',
+    location: payload.location ?? '',
+    photo_key: payload.photo_key ?? '',
+    photo_url: payload.photo_url ?? '',
+    status: 'pending' as const,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // ---- Supabase is the source of truth for the request queue ----
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.from(JOIN_TABLE).insert(row).select().single();
+
+    if (error) {
+      // 23505 = unique_violation on the pending-email index.
+      if ((error as any).code === '23505') {
+        return { success: false, message: 'A request from this email is already awaiting review.' };
+      }
+      // RLS/network failure: fall back to local-only so the applicant isn't
+      // left hanging, and surface it so the admin knows to re-check.
+      console.error('Failed to submit join request to Supabase:', error);
+      const local = saveJoinRequestLocal(row);
+      logAudit({
+        actor_email: email,
+        action: 'join.request.local_fallback',
+        target_type: 'join_request',
+        target_id: String(local.id),
+        details: { name, email, note: 'Supabase write failed; stored locally only.' },
+      });
+      return {
+        success: true,
+        message: 'Request saved, but the server could not be reached. An administrator will sync it manually.',
+      };
+    }
+
+    if (data) cacheJoinRequest(data as JoinRequest);
+  } else {
+    saveJoinRequestLocal(row);
+  }
+
+  logAudit({
+    actor_email: email,
+    action: 'join.request.submitted',
+    target_type: 'join_request',
+    target_id: email,
+    details: { name, email, student_id: payload.student_id, emailVerified: options.emailVerified },
+  });
+
+  return { success: true };
+}
+
+function saveJoinRequestLocal(row: Omit<JoinRequest, 'id'>): JoinRequest {
+  const requests = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+  const nextId = requests.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1;
+  const created: JoinRequest = { ...row, id: nextId };
+  requests.unshift(created);
+  setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, 500));
+  return created;
+}
+
+function cacheJoinRequest(request: JoinRequest): void {
+  const requests = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+  const idx = requests.findIndex((r) => Number(r.id) === Number(request.id));
+  if (idx >= 0) requests[idx] = request;
+  else requests.unshift(request);
+  setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, 500));
+}
+
+/** All join requests, newest first. Supabase first, localStorage as fallback. */
+export async function getJoinRequests(): Promise<JoinRequest[]> {
+  initStorage();
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from(JOIN_TABLE)
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      if (!error && data) {
+        setLocal(STORAGE_KEYS.JOIN_REQUESTS, data as JoinRequest[]);
+        return data as JoinRequest[];
+      }
+    } catch (err) {
+      console.error('Error fetching join requests:', err);
+    }
+  }
+
+  return getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+}
+
+/** The request belonging to one email, if any. */
+export async function getJoinRequestByEmail(email: string): Promise<JoinRequest | undefined> {
+  const clean = (email || '').toLowerCase().trim();
+  if (!clean) return undefined;
+  const requests = await getJoinRequests();
+  return requests.find((r) => r.email.toLowerCase().trim() === clean);
+}
+
+/**
+ * Approves a request: promotes it into `cse_archive_members` with
+ * approval_status = 'approved' and marks the staging row approved.
+ */
+export async function approveJoinRequest(
+  requestId: number | string,
+  actorEmail?: string
+): Promise<{ success: boolean; message?: string }> {
+  const requests = await getJoinRequests();
+  const request = requests.find((r) => Number(r.id) === Number(requestId));
+  if (!request) return { success: false, message: 'Join request not found.' };
+  if (request.status === 'approved') return { success: false, message: 'This request was already approved.' };
+
+  const now = new Date().toISOString();
+
+  // 1. Create the real member record (id is assigned locally).
+  const member = createMember(
+    {
+      name: request.name,
+      email: request.email,
+      mobile: request.mobile || '',
+      student_id: request.student_id || '',
+      blood: request.blood || '',
+      designation: request.designation || '',
+      organization: request.organization || '',
+      location: request.location || '',
+      photo_key: request.photo_key || '',
+      photo_url: request.photo_url || '',
+      // Approved members are public immediately.
+      visible: true,
+      approval_status: 'approved',
+      reviewed_by: actorEmail || 'system',
+      reviewed_at: now,
+      rejection_reason: null,
+      auth_user_id: request.auth_user_id ?? null,
+    } as Omit<Member, 'id' | 'legacy_id' | 'created_at' | 'updated_at'>,
+    actorEmail
+  );
+
+  // 2. Mark the staging row approved.
+  await setJoinRequestStatus(request.id, 'approved', actorEmail);
+
+  logAudit({
+    actor_email: actorEmail || 'system',
+    action: 'join.request.approved',
+    target_type: 'member',
+    target_id: String(member.id),
+    details: { name: member.name, email: member.email, requestId: request.id },
+  });
+
+  return { success: true };
+}
+
+/** Rejects a request. Nothing is added to the members table. */
+export async function rejectJoinRequest(
+  requestId: number | string,
+  reason?: string,
+  actorEmail?: string
+): Promise<{ success: boolean; message?: string }> {
+  const request = (await getJoinRequests()).find((r) => Number(r.id) === Number(requestId));
+  if (!request) return { success: false, message: 'Join request not found.' };
+
+  await setJoinRequestStatus(request.id, 'rejected', actorEmail, reason);
+
+  // Keep any member row created by an earlier approval in sync.
+  const existing = getMemberByEmail(request.email);
+  if (existing) {
+    updateMember(
+      existing.id,
+      {
+        approval_status: 'rejected',
+        reviewed_by: actorEmail || 'system',
+        reviewed_at: new Date().toISOString(),
+        rejection_reason: reason || '',
+      },
+      actorEmail
+    );
+  }
+
+  logAudit({
+    actor_email: actorEmail || 'system',
+    action: 'join.request.rejected',
+    target_type: 'join_request',
+    target_id: String(request.id),
+    details: { email: request.email, name: request.name, reason: reason || 'No reason provided' },
+  });
+
+  return { success: true };
+}
+
+async function setJoinRequestStatus(
+  requestId: number | string,
+  status: JoinRequestStatus,
+  actorEmail?: string,
+  reason?: string
+): Promise<void> {
+  const patch = {
+    status,
+    reviewed_by: actorEmail || 'system',
+    reviewed_at: new Date().toISOString(),
+    rejection_reason: status === 'rejected' ? reason || 'No reason provided' : null,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Local cache always updated so the UI reacts instantly.
+  const requests = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+  const localIdx = requests.findIndex((r) => Number(r.id) === Number(requestId));
+  if (localIdx >= 0) {
+    requests[localIdx] = { ...requests[localIdx], ...patch };
+    setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests);
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.from(JOIN_TABLE).update(patch).eq('id', requestId);
+    if (error) console.error('Failed to update join request status:', error);
+  }
+}
+
+/** Member records created through the join flow (pending or rejected). */
+export function getPendingMembers(): Member[] {
+  return getMembers().filter((m) => normalizeApproval(m.approval_status) !== 'approved');
+}
+
+/** Counts for the admin sidebar badge. */
+export function getApprovalCounts(): { pending: number; approved: number; rejected: number } {
+  const members = getMembers();
+  let pending = 0;
+  let rejected = 0;
+  for (const m of members) {
+    const status = normalizeApproval(m.approval_status);
+    if (status === 'pending') pending++;
+    else if (status === 'rejected') rejected++;
+  }
+  return { pending, approved: members.length - pending - rejected, rejected };
+}
+
 // SITE SETTINGS
 export function getSiteSettings(): SiteSettings {
   initStorage();
@@ -336,219 +724,7 @@ export function updateSiteSettings(settings: Partial<SiteSettings>, actorEmail?:
   return updated;
 }
 
-// JOIN REQUESTS
-// JOIN REQUESTS - 100% DIRECT SUPABASE TABLE (NO LOCAL STORAGE CACHER)
-export async function getJoinRequestsFromSupabase(): Promise<JoinRequest[]> {
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('cse_archive_join_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        return data as JoinRequest[];
-      }
-      if (error) console.error('Error fetching join requests directly from Supabase DB table:', error);
-    } catch (err) {
-      console.error('Error in getJoinRequestsFromSupabase:', err);
-    }
-  }
-  return [];
-}
-
-export function getJoinRequests(): JoinRequest[] {
-  return [];
-}
-
-export async function submitJoinRequestToSupabase(
-  data: Omit<JoinRequest, 'id' | 'status' | 'created_at' | 'updated_at'>
-): Promise<JoinRequest> {
-  const cleanEmail = (data.email || '').toLowerCase().trim();
-
-  let existingId: string | null = null;
-  if (isSupabaseConfigured && supabase) {
-    const { data: existing } = await supabase
-      .from('cse_archive_join_requests')
-      .select('id')
-      .eq('email', cleanEmail)
-      .maybeSingle();
-
-    if (existing) {
-      existingId = existing.id;
-    }
-  }
-
-  const reqId = existingId || ('req-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7));
-  const newReq: JoinRequest = {
-    ...data,
-    id: reqId,
-    email: cleanEmail,
-    status: 'pending',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  if (isSupabaseConfigured && supabase) {
-    const { error } = await supabase
-      .from('cse_archive_join_requests')
-      .upsert({
-        id: newReq.id,
-        name: newReq.name,
-        email: newReq.email,
-        mobile: newReq.mobile || '',
-        student_id: newReq.student_id || '',
-        blood: newReq.blood || '',
-        designation: newReq.designation || '',
-        organization: newReq.organization || '',
-        location: newReq.location || '',
-        photo_key: newReq.photo_key || '',
-        photo_url: newReq.photo_url || '',
-        status: newReq.status,
-        rejection_reason: newReq.rejection_reason || '',
-        created_at: newReq.created_at,
-        updated_at: newReq.updated_at,
-      });
-
-    if (error) {
-      console.error('Supabase DB table join request insert error:', error);
-      throw new Error(error.message);
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('join_requests_updated'));
-  }
-
-  logAudit({
-    actor_email: newReq.email,
-    action: 'join_request.submit',
-    target_type: 'join_request',
-    target_id: newReq.id,
-    details: { name: newReq.name, student_id: newReq.student_id }
-  });
-
-  return newReq;
-}
-
-export function submitJoinRequest(data: Omit<JoinRequest, 'id' | 'status' | 'created_at' | 'updated_at'>): JoinRequest {
-  submitJoinRequestToSupabase(data).catch(console.error);
-  const cleanEmail = (data.email || '').toLowerCase().trim();
-  return {
-    ...data,
-    id: 'req-' + Date.now(),
-    email: cleanEmail,
-    status: 'pending',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-}
-
-export async function reviewJoinRequestInSupabase(
-  id: string,
-  status: 'approved' | 'rejected',
-  reviewerEmail: string,
-  rejectionReason?: string
-): Promise<void> {
-  const reviewedAt = new Date().toISOString();
-  let reqToProcess: JoinRequest | null = null;
-
-  if (isSupabaseConfigured && supabase) {
-    // 1. Fetch exact submitted request directly from Supabase DB table
-    const { data: dbReq } = await supabase
-      .from('cse_archive_join_requests')
-      .select('*')
-      .or(`id.eq.${id},email.eq.${id.toLowerCase().trim()}`)
-      .maybeSingle();
-
-    if (dbReq) {
-      reqToProcess = dbReq as JoinRequest;
-    }
-
-    const targetReqId = dbReq ? dbReq.id : id;
-
-    // 2. Update request status directly in Supabase DB table
-    const { error: updateErr } = await supabase
-      .from('cse_archive_join_requests')
-      .update({
-        status,
-        reviewed_by: reviewerEmail,
-        reviewed_at: reviewedAt,
-        rejection_reason: rejectionReason || '',
-        updated_at: reviewedAt,
-      })
-      .eq('id', targetReqId);
-
-    if (updateErr) {
-      console.error('Failed to update join request in Supabase DB table:', updateErr);
-      throw new Error(updateErr.message);
-    }
-
-    // 3. If approved, insert EXACT submitted info directly into Supabase cse_archive_members table!
-    if (status === 'approved' && reqToProcess) {
-      const { data: maxIdData } = await supabase
-        .from('cse_archive_members')
-        .select('id')
-        .order('id', { ascending: false })
-        .limit(1);
-
-      const nextId = (maxIdData && maxIdData.length > 0 ? maxIdData[0].id : 922) + 1;
-
-      const { data: insertedMember, error: memberErr } = await supabase
-        .from('cse_archive_members')
-        .upsert({
-          id: nextId,
-          legacy_id: nextId,
-          name: reqToProcess.name,
-          email: reqToProcess.email.toLowerCase().trim(),
-          mobile: reqToProcess.mobile || '',
-          student_id: reqToProcess.student_id || '',
-          blood: reqToProcess.blood || '',
-          designation: reqToProcess.designation || '',
-          organization: reqToProcess.organization || '',
-          location: reqToProcess.location || '',
-          photo_key: reqToProcess.photo_key || '',
-          photo_url: reqToProcess.photo_url || '',
-          visible: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select('*')
-        .maybeSingle();
-
-      if (memberErr) {
-        console.error('Supabase cse_archive_members insert error on approval:', memberErr);
-      }
-
-      if (insertedMember) {
-        const members = getMembers();
-        const existingIdx = members.findIndex(m => m.email && m.email.toLowerCase().trim() === insertedMember.email.toLowerCase().trim());
-        if (existingIdx !== -1) {
-          members[existingIdx] = insertedMember as Member;
-        } else {
-          members.unshift(insertedMember as Member);
-        }
-        saveMembers(members);
-      }
-    }
-  }
-
-  logAudit({
-    actor_email: reviewerEmail,
-    action: `join_request.${status}`,
-    target_type: 'join_request',
-    target_id: id,
-    details: { status, rejectionReason }
-  });
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('join_requests_updated'));
-  }
-}
-
-export function reviewJoinRequest(id: string, status: 'approved' | 'rejected', reviewerEmail: string, rejectionReason?: string): void {
-  reviewJoinRequestInSupabase(id, status, reviewerEmail, rejectionReason).catch(console.error);
-}
 
 // ADMIN MANAGEMENT
 export function getAdminUsers(): AdminUser[] {
@@ -716,6 +892,109 @@ export function getMemberViews(): MemberView[] {
   return views;
 }
 
+/**
+ * Records a directory search along with how many alumni matched.
+ * Blank queries are ignored, and identical repeated queries inside
+ * `debounceMs` are collapsed so a single search isn't logged per keystroke.
+ */
+export function trackSearch(
+  query: string,
+  resultsCount: number,
+  options: { source?: SearchView['source']; filters?: string; debounceMs?: number } = {}
+): void {
+  initStorage();
+
+  const trimmed = (query || '').trim();
+  if (!trimmed) return;
+
+  const { source = 'desktop', filters, debounceMs = 1500 } = options;
+
+  const views = getLocal<SearchView[]>(STORAGE_KEYS.SEARCH_VIEWS, []);
+  const now = Date.now();
+
+  // Collapse rapid duplicates of the same query (same text + same result count).
+  const newest = views[0];
+  if (
+    newest &&
+    newest.query.toLowerCase() === trimmed.toLowerCase() &&
+    newest.results_count === resultsCount &&
+    now - new Date(newest.created_at).getTime() < debounceMs
+  ) {
+    return;
+  }
+
+  const newView: SearchView = {
+    id: now,
+    query: trimmed,
+    results_count: Math.max(0, resultsCount || 0),
+    source,
+    filters,
+    ip_hash: 'beb78c1bbbd0f840',
+    user_agent:
+      typeof navigator !== 'undefined'
+        ? navigator.userAgent
+        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/149.0',
+    country: 'Bangladesh',
+    city: 'Dhaka',
+    created_at: new Date().toISOString(),
+  };
+
+  views.unshift(newView);
+  setLocal(STORAGE_KEYS.SEARCH_VIEWS, views.slice(0, 1000));
+}
+
+export function getSearchViews(): SearchView[] {
+  initStorage();
+  const views = getLocal<SearchView[]>(STORAGE_KEYS.SEARCH_VIEWS, []);
+  if (!views || views.length === 0) {
+    return ((initialAnalyticsRaw as any).searchViews || []) as SearchView[];
+  }
+  return views;
+}
+
+/** Aggregated search insights: top queries, no-result queries, totals. */
+export function getSearchAnalytics() {
+  initStorage();
+  const searches = getSearchViews();
+
+  const queryMap: Record<string, { query: string; searches: number; results: number; lastSearched: string }> = {};
+
+  for (const sv of searches) {
+    const key = (sv.query || '').trim().toLowerCase();
+    if (!key) continue;
+
+    if (!queryMap[key]) {
+      queryMap[key] = { query: sv.query, searches: 0, results: 0, lastSearched: sv.created_at };
+    }
+    queryMap[key].searches += 1;
+    queryMap[key].results += sv.results_count || 0;
+    if (new Date(sv.created_at).getTime() > new Date(queryMap[key].lastSearched).getTime()) {
+      queryMap[key].lastSearched = sv.created_at;
+    }
+  }
+
+  const topQueries = Object.values(queryMap)
+    .map((entry) => ({ ...entry, avgResults: entry.searches ? Math.round(entry.results / entry.searches) : 0 }))
+    .sort((a, b) => b.searches - a.searches);
+
+  const noResultQueries = Object.values(queryMap)
+    .filter((entry) => entry.results === 0)
+    .sort((a, b) => b.searches - a.searches);
+
+  const totalResults = searches.reduce((sum, sv) => sum + (sv.results_count || 0), 0);
+
+  return {
+    totalSearches: searches.length,
+    uniqueQueries: topQueries.length,
+    noResultSearches: searches.filter((sv) => (sv.results_count || 0) === 0).length,
+    averageResults: searches.length ? Math.round(totalResults / searches.length) : 0,
+    mobileSearches: searches.filter((sv) => sv.source === 'mobile').length,
+    desktopSearches: searches.filter((sv) => sv.source === 'desktop').length,
+    topQueries,
+    noResultQueries,
+  };
+}
+
 export function getAnalyticsStats() {
   initStorage();
   const pageViews = getPageViews();
@@ -744,6 +1023,7 @@ export function getAnalyticsStats() {
   return {
     totalPageViews: pageViews.length,
     totalMemberViews: memberViews.length,
+    totalSearches: getSearchViews().length,
     topViewedMembers,
   };
 }

@@ -2,10 +2,43 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import React, { useState, useEffect } from 'react';
 
-const R2_ENDPOINT = import.meta.env.VITE_R2_ENDPOINT || 'https://d284e14d88a942f51c8a61cd326b32f8.r2.cloudflarestorage.com';
-const R2_ACCESS_KEY_ID = import.meta.env.VITE_R2_ACCESS_KEY_ID || '16bc7c98614159619a9a87368223d23d';
-const R2_SECRET_ACCESS_KEY = import.meta.env.VITE_R2_SECRET_ACCESS_KEY || 'f493361b3eda19848e02a6d0229cd8d1c29cd124af7802a4cbf48a66775c4efa';
+/**
+ * Cloudflare R2 configuration.
+ *
+ * These values are read from Vite env vars ONLY. They are intentionally not
+ * hardcoded: this module is bundled into the public browser bundle, so any
+ * literal secret committed here would be publicly readable by anyone who loads
+ * the site. Set the values in `.env` (local) and in the Vercel project
+ * environment variables (production):
+ *
+ *   VITE_R2_ENDPOINT
+ *   VITE_R2_ACCESS_KEY_ID
+ *   VITE_R2_SECRET_ACCESS_KEY
+ *   VITE_R2_BUCKET_NAME
+ *
+ * Until they are provided the app degrades gracefully to the generated SVG
+ * avatars instead of failing.
+ */
+const R2_ENDPOINT = import.meta.env.VITE_R2_ENDPOINT || '';
+const R2_ACCESS_KEY_ID = import.meta.env.VITE_R2_ACCESS_KEY_ID || '';
+const R2_SECRET_ACCESS_KEY = import.meta.env.VITE_R2_SECRET_ACCESS_KEY || '';
 const R2_BUCKET_NAME = import.meta.env.VITE_R2_BUCKET_NAME || 'cse-alumni';
+
+/** True only when all four R2 values are present. */
+export const isR2Configured = Boolean(
+  R2_ENDPOINT && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET_NAME
+);
+
+const s3Client = isR2Configured
+  ? new S3Client({
+      region: 'auto',
+      endpoint: R2_ENDPOINT,
+      credentials: {
+        accessKeyId: R2_ACCESS_KEY_ID,
+        secretAccessKey: R2_SECRET_ACCESS_KEY,
+      },
+    })
+  : null;
 
 export const DEFAULT_AVATAR_MALE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="%231e293b"/><stop offset="100%" stop-color="%230f172a"/></linearGradient></defs><rect width="200" height="200" fill="url(%23g)"/><circle cx="100" cy="72" r="36" fill="%2338bdf8"/><path d="M40 180 c0-36 25-54 60-54 s60 18 60 54 z" fill="%2338bdf8"/></svg>`;
 
@@ -37,15 +70,6 @@ export function getDefaultAvatar(gender?: string, name?: string): string {
   return DEFAULT_AVATAR_MALE;
 }
 
-const s3Client = new S3Client({
-  region: 'auto',
-  endpoint: R2_ENDPOINT,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
-
 // In-memory cache for presigned URLs to avoid redundant signing overhead
 const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
@@ -74,6 +98,12 @@ export async function getPresignedPhotoUrl(photoKeyOrUrl?: string): Promise<stri
   }
 
   try {
+    if (!s3Client) {
+      // No R2 credentials configured — fall back to the generated avatar
+      // rather than throwing on every card.
+      return DEFAULT_AVATAR;
+    }
+
     const command = new GetObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: cleanKey,
@@ -107,8 +137,10 @@ export function getPhotoUrlSync(photoKeyOrUrl?: string): string {
   const cached = presignedUrlCache.get(cleanKey);
   if (cached) return cached.url;
 
-  // Background trigger
-  getPresignedPhotoUrl(cleanKey).catch(() => {});
+  // Background trigger (no-op when R2 is not configured).
+  if (isR2Configured) {
+    getPresignedPhotoUrl(cleanKey).catch(() => {});
+  }
   return DEFAULT_AVATAR;
 }
 
