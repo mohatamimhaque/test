@@ -125,13 +125,19 @@ export const JoinArchivePage: React.FC = () => {
       const existing = await getJoinRequestByEmail(clean);
       if (cancelled || !existing) return;
 
+      // `cancelled` must be re-checked after every await. The branches below
+      // overwrite step and form fields, so firing one after the applicant has
+      // already moved on (they typed another email, or started filling the
+      // form) would wipe what they typed.
       if (existing.status === 'pending') {
+        if (cancelled) return;
         setStep('done');
         setMessage({
           type: 'info',
           text: 'Your application is already submitted and awaiting administrator review.',
         });
       } else if (existing.status === 'rejected') {
+        if (cancelled) return;
         setStep('form');
         setVerifiedEmail(clean);
         setForm((f) => ({ ...f, email: clean, name: existing.name || '', student_id: existing.student_id || '' }));

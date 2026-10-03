@@ -40,7 +40,9 @@ export const MobileHomePage: React.FC<MobileHomePageProps> = ({ onSelectMember }
   const [searchVal, setSearchVal] = useState('');
 
   const visibleMembers = members.filter((m) => m.visible);
-  const featured = members.slice(0, 8);
+  // Featured must come from the visible set too: `visible: false` is how an
+  // admin hides a record, so showing it here defeats the toggle.
+  const featured = [...visibleMembers].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
   const recent = [...visibleMembers].sort((a, b) => b.id - a.id).slice(0, 5);
 
   // Lightweight derived stats (counts only, no extra backend calls).

@@ -11,7 +11,7 @@
  * hand-edited value can never crash the app — it just falls back to the default.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const PREFIX = 'cse_archive_ui_';
 
@@ -49,10 +49,6 @@ export function usePersistentState<T extends string>(
       return fallback;
     }
   });
-
-  // Keeps the setter stable so it can be listed in effect deps safely.
-  const valueRef = useRef(value);
-  valueRef.current = value;
 
   const setPersisted = useCallback(
     (next: T) => {

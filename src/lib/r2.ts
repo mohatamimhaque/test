@@ -70,8 +70,22 @@ export function getDefaultAvatar(gender?: string, name?: string): string {
   return DEFAULT_AVATAR_MALE;
 }
 
-// In-memory cache for presigned URLs to avoid redundant signing overhead
+// In-memory cache for presigned URLs to avoid redundant signing overhead.
+// Bounded so a long session browsing the whole directory cannot grow it
+// without limit; the oldest entry is evicted first.
+const PRESIGNED_CACHE_LIMIT = 1200;
 const presignedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
+function cachePresignedUrl(key: string, value: { url: string; expiresAt: number }): void {
+  // Re-insert so Map iteration order stays oldest-first.
+  presignedUrlCache.delete(key);
+  presignedUrlCache.set(key, value);
+  while (presignedUrlCache.size > PRESIGNED_CACHE_LIMIT) {
+    const oldest = presignedUrlCache.keys().next();
+    if (oldest.done) break;
+    presignedUrlCache.delete(oldest.value);
+  }
+}
 
 /**
  * Generates a presigned Cloudflare R2 GetObject URL (cached for 12 hours)
@@ -111,8 +125,10 @@ export async function getPresignedPhotoUrl(photoKeyOrUrl?: string): Promise<stri
 
     // 24 hours expiry
     const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 86400 });
-    presignedUrlCache.set(cleanKey, {
+    cachePresignedUrl(cleanKey, {
       url: presignedUrl,
+      // Slightly under the 24 h signature so a cached URL is never handed out
+      // moments before it expires.
       expiresAt: now + 80000 * 1000,
     });
     return presignedUrl;
@@ -135,7 +151,10 @@ export function getPhotoUrlSync(photoKeyOrUrl?: string): string {
   }
 
   const cached = presignedUrlCache.get(cleanKey);
-  if (cached) return cached.url;
+  // Honour the expiry here too: returning an expired URL would render as a
+  // broken image rather than triggering a re-sign.
+  if (cached && cached.expiresAt > Date.now() + 60000) return cached.url;
+  if (cached) presignedUrlCache.delete(cleanKey);
 
   // Background trigger (no-op when R2 is not configured).
   if (isR2Configured) {

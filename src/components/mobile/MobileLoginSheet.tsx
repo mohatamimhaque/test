@@ -6,7 +6,7 @@
  * comfortable keypad-friendly layout.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mail, ArrowRight, Loader2, RefreshCw, ShieldCheck, AlertCircle, CheckCircle2, Edit3, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Sheet } from './MobilePrimitives';
@@ -15,6 +15,43 @@ interface MobileLoginSheetProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+/**
+ * One OTP input cell.
+ *
+ * Hoisted out of `MobileLoginSheet` on purpose. When this was declared inside
+ * the component body it became a NEW component type on every render, so React
+ * unmounted and remounted all eight inputs each time — including once a second
+ * while the resend countdown ticked. That destroyed the typed digits and threw
+ * away keyboard focus mid-entry. Declaring it at module scope keeps its identity
+ * stable across renders.
+ */
+const DigitCell: React.FC<{
+  index: number;
+  value: string;
+  registerRef: (index: number, el: HTMLInputElement | null) => void;
+  onChange: (index: number, value: string) => void;
+  onKeyDown: (index: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+}> = ({ index, value, registerRef, onChange, onKeyDown, onPaste }) => (
+  <input
+    ref={(el) => registerRef(index, el)}
+    type="text"
+    inputMode="numeric"
+    pattern="[0-9]*"
+    maxLength={1}
+    value={value}
+    onChange={(e) => onChange(index, e.target.value)}
+    onKeyDown={(e) => onKeyDown(index, e)}
+    onPaste={onPaste}
+    aria-label={`Digit ${index + 1}`}
+    className={`w-full h-[60px] text-center text-2xl font-mono font-bold rounded-2xl border-2 outline-none transition-all p-0 ${
+      value
+        ? 'bg-primary-50 dark:bg-primary-950/60 border-primary-500 text-primary-600 dark:text-primary-300 shadow-[0_0_0_3px_rgba(12,142,233,0.12)]'
+        : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-primary-500'
+    }`}
+  />
+);
 
 export const MobileLoginSheet: React.FC<MobileLoginSheetProps> = ({ isOpen, onClose }) => {
   const { sendOtp, verifyOtp } = useAuth();
@@ -28,6 +65,11 @@ export const MobileLoginSheet: React.FC<MobileLoginSheetProps> = ({ isOpen, onCl
   const [canResend, setCanResend] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Stable callbacks so the cells never re-render more than they must.
+  const registerRef = useCallback((index: number, el: HTMLInputElement | null) => {
+    inputRefs.current[index] = el;
+  }, []);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -100,7 +142,10 @@ export const MobileLoginSheet: React.FC<MobileLoginSheetProps> = ({ isOpen, onCl
         if (i < 8) next[i] = d;
       });
       setOtpDigits(next);
-      inputRefs.current[Math.min(7, digits.length)]?.focus();
+      // Advance to the first EMPTY cell, not the last one written.
+      // Math.min(7, digits.length) landed on the final filled digit.
+      const nextEmpty = next.findIndex((d) => d === '');
+      inputRefs.current[nextEmpty === -1 ? 7 : nextEmpty]?.focus();
       return;
     }
 
@@ -126,7 +171,9 @@ export const MobileLoginSheet: React.FC<MobileLoginSheetProps> = ({ isOpen, onCl
       next[i] = d;
     });
     setOtpDigits(next);
-    inputRefs.current[Math.min(7, digits.length)]?.focus();
+    // Same off-by-one as above: land on the first empty cell.
+    const nextEmpty = next.findIndex((d) => d === '');
+    inputRefs.current[nextEmpty === -1 ? 7 : nextEmpty]?.focus();
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -148,28 +195,6 @@ export const MobileLoginSheet: React.FC<MobileLoginSheetProps> = ({ isOpen, onCl
       setMessage({ type: 'error', text: res.message || 'Invalid 8-digit OTP code. Please check and retry.' });
     }
   };
-
-  const DigitCell = ({ index }: { index: number }) => (
-    <input
-      ref={(el) => {
-        inputRefs.current[index] = el;
-      }}
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      maxLength={1}
-      value={otpDigits[index]}
-      onChange={(e) => handleDigitChange(index, e.target.value)}
-      onKeyDown={(e) => handleKeyDown(index, e)}
-      onPaste={handlePaste}
-      aria-label={`Digit ${index + 1}`}
-      className={`w-full h-[60px] text-center text-2xl font-mono font-bold rounded-2xl border-2 outline-none transition-all p-0 ${
-        otpDigits[index]
-          ? 'bg-primary-50 dark:bg-primary-950/60 border-primary-500 text-primary-600 dark:text-primary-300 shadow-[0_0_0_3px_rgba(12,142,233,0.12)]'
-          : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-primary-500'
-      }`}
-    />
-  );
 
   return (
     <Sheet
@@ -291,7 +316,15 @@ export const MobileLoginSheet: React.FC<MobileLoginSheetProps> = ({ isOpen, onCl
 
               <div className="grid grid-cols-4 gap-2">
                 {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <DigitCell key={i} index={i} />
+                  <DigitCell
+                    key={i}
+                    index={i}
+                    value={otpDigits[i]}
+                    registerRef={registerRef}
+                    onChange={handleDigitChange}
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
+                  />
                 ))}
               </div>
             </div>

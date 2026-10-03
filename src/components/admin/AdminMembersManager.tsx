@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Member } from '../../types';
 import { getMembers, updateMember, createMember, deleteMember, normalizeApproval } from '../../lib/storage';
 import { getPhotoUrl, processPhotoUpload, getDefaultAvatar } from '../../lib/r2';
@@ -70,6 +70,12 @@ export const AdminMembersManager: React.FC = () => {
 
   const totalPages = Math.ceil(filteredMembers.length / pageSize) || 1;
   const paginatedMembers = filteredMembers.slice((page - 1) * pageSize, page * pageSize);
+
+  // Deleting the last row on the last page would otherwise leave `page` past
+  // the end, rendering an empty table while the pager still shows "page N of N".
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const handleToggleVisibility = (m: Member) => {
     updateMember(m.id, { visible: !m.visible }, user?.email);

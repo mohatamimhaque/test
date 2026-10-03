@@ -29,7 +29,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectMember, onOpenLoginM
   const members = getPublicMembers();
   const navigate = useNavigate();
 
-  const featuredMembers = members.slice(0, 6);
+  // Respect the admin's `visible` toggle, same as the mobile home page does.
+  const featuredMembers = members
+    .filter((m) => m.visible)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, 6);
 
   const [searchVal, setSearchVal] = useState('');
 

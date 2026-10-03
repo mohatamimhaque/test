@@ -119,7 +119,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({ member, onClose }) => 
                   {member.designation || 'Alumni Member'}
                 </p>
                 <p className="text-xs text-slate-400">
-                  {member.organization || 'Department of CSE'}
+                  {member.organization || 'Dhaka University of Engineering and Technology, Gazipur'}
                 </p>
               </div>
 

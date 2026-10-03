@@ -394,10 +394,41 @@ export function isPublicMember(m: Member): boolean {
   return normalizeApproval(m.approval_status) === 'approved';
 }
 
+/**
+ * Rewrites "&" as "and" in institution names for display.
+ *
+ * A large share of the archive lists DUET in the `organization` field, and the
+ * raw records mix "&", "and" and a few misspellings. Rather than editing ~20
+ * rows in the seed JSON — which would not touch the copy already seeded into
+ * each visitor's localStorage, nor the rows in Supabase — the wording is
+ * normalised on the way out. The stored value is left untouched so an admin can
+ * still edit the original text.
+ */
+export function formatOrgName(org?: string | null): string {
+  if (!org) return '';
+  // Only the ampersand; leave other punctuation and casing alone.
+  return org.replace(/\s*&\s*/g, ' and ');
+}
+
 function getMembersLocal(): Member[] {
   const members = getLocal<Member[]>(STORAGE_KEYS.MEMBERS, []);
-  return members.map((m) => ({ ...m, approval_status: normalizeApproval(m.approval_status) }));
+  return members.map((m) => ({
+    ...m,
+    organization: formatOrgName(m.organization),
+    approval_status: normalizeApproval(m.approval_status),
+  }));
 }
+
+/**
+ * Set while a local mutation is in flight and not yet confirmed by Supabase.
+ *
+ * `getMembers()` kicks off a background refresh that unconditionally rewrites
+ * the localStorage cache when it resolves. Without this guard, an admin edit
+ * made while that request was in flight was silently discarded: the response
+ * carried pre-edit rows and overwrote them. `saveMembers` sets the flag and
+ * `getMembersFromSupabase` refuses to overwrite while it is set.
+ */
+let pendingLocalWrites = 0;
 
 export async function getMembersFromSupabase(): Promise<Member[]> {
   initStorage();
@@ -412,12 +443,21 @@ export async function getMembersFromSupabase(): Promise<Member[]> {
         // Rows created before the approval column existed come back without it.
         // Normalise so the rest of the app can treat `approval_status` as
         // always present, defaulting the legacy archive to 'approved'.
-        const normalized = (data as Member[]).map((m) => ({
+        //
+        // The raw rows are what gets cached, so an admin editing the original
+        // "&" wording still sees what is actually stored. Display copy is
+        // applied by getMembersLocal() on the way out.
+        //
+        // Skip the cache write while a local edit is unconfirmed, otherwise
+        // stale server rows would clobber it.
+        if (pendingLocalWrites === 0) {
+          setLocal(STORAGE_KEYS.MEMBERS, data as Member[]);
+        }
+        return (data as Member[]).map((m) => ({
           ...m,
+          organization: formatOrgName(m.organization),
           approval_status: normalizeApproval(m.approval_status),
         }));
-        setLocal(STORAGE_KEYS.MEMBERS, normalized);
-        return normalized;
       }
     } catch (err) {
       console.error('Error fetching members from Supabase:', err);
@@ -443,8 +483,22 @@ export function getPublicMembers(): Member[] {
   return getMembers().filter(isPublicMember);
 }
 
+/**
+ * Writes the member cache and blocks the background Supabase refresh from
+ * overwriting it until `releasePendingWrites()` is called.
+ *
+ * Callers wrap their local mutation in begin/end so an in-flight server
+ * response cannot revert it. The counter (rather than a boolean) handles
+ * overlapping edits.
+ */
 export function saveMembers(members: Member[]): void {
+  pendingLocalWrites++;
   setLocal(STORAGE_KEYS.MEMBERS, members);
+}
+
+/** Marks the local mutation as finished, allowing refreshes again. */
+export function releasePendingWrites(): void {
+  if (pendingLocalWrites > 0) pendingLocalWrites--;
 }
 
 export function getMemberById(id: number): Member | undefined {
@@ -500,17 +554,23 @@ export function updateMember(id: number, updates: Partial<Member>, actorEmail?: 
         updated_at: updated.updated_at,
       })
       .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          // PGRST204 means the table is missing a column — almost always an
-          // unapplied migration, and permanent until it is run.
-          const hint = (error as any).code === 'PGRST204'
-            ? ' Run supabase/migrations/003_members_missing_columns.sql.'
-            : '';
-          console.error('Failed to sync member update to Supabase:' + hint, error);
-          notifySupabaseSyncFailure('member.update', error);
-        }
-      });
+      .then(
+        ({ error }) => {
+          if (error) {
+            // PGRST204 means the table is missing a column — almost always an
+            // unapplied migration, and permanent until it is run.
+            const hint = (error as any).code === 'PGRST204'
+              ? ' Run supabase/migrations/003_members_missing_columns.sql.'
+              : '';
+            console.error('Failed to sync member update to Supabase:' + hint, error);
+            notifySupabaseSyncFailure('member.update', error);
+          }
+        },
+        (err) => console.error('Member update sync failed:', err)
+      )
+      .then(releasePendingWrites, releasePendingWrites);
+  } else {
+    releasePendingWrites();
   }
 
   logAudit({
@@ -574,15 +634,21 @@ export function createMember(newMember: Omit<Member, 'id' | 'legacy_id' | 'creat
         created_at: created.created_at,
         updated_at: created.updated_at,
       })
-      .then(({ error }) => {
-        if (error) {
-          const hint = (error as any).code === 'PGRST204'
-            ? ' Run supabase/migrations/003_members_missing_columns.sql.'
-            : '';
-          console.error('Failed to sync member creation to Supabase:' + hint, error);
-          notifySupabaseSyncFailure('member.create', error);
-        }
-      });
+      .then(
+        ({ error }) => {
+          if (error) {
+            const hint = (error as any).code === 'PGRST204'
+              ? ' Run supabase/migrations/003_members_missing_columns.sql.'
+              : '';
+            console.error('Failed to sync member creation to Supabase:' + hint, error);
+            notifySupabaseSyncFailure('member.create', error);
+          }
+        },
+        (err) => console.error('Member creation sync failed:', err)
+      )
+      .then(releasePendingWrites, releasePendingWrites);
+  } else {
+    releasePendingWrites();
   }
 
   logAudit({
@@ -607,12 +673,18 @@ export function deleteMember(id: number, actorEmail?: string): void {
       .from('cse_archive_members')
       .delete()
       .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          console.error('Failed to sync member deletion to Supabase:', error);
-          notifySupabaseSyncFailure('member.delete', error);
-        }
-      });
+      .then(
+        ({ error }) => {
+          if (error) {
+            console.error('Failed to sync member deletion to Supabase:', error);
+            notifySupabaseSyncFailure('member.delete', error);
+          }
+        },
+        (err) => console.error('Member deletion sync failed:', err)
+      )
+      .then(releasePendingWrites, releasePendingWrites);
+  } else {
+    releasePendingWrites();
   }
 
   logAudit({
@@ -1146,20 +1218,16 @@ export function trackMemberView(memberId: number, memberName: string): void {
 
 export function getPageViews(): PageView[] {
   initStorage();
-  const views = getLocal<PageView[]>(STORAGE_KEYS.PAGE_VIEWS, []);
-  if (!views || views.length === 0) {
-    return initialAnalyticsRaw.pageViews as PageView[];
-  }
-  return views;
+  // No fallback to the seed data: initStorage() already seeds this key on the
+  // first run, so an empty array now means "genuinely no views recorded".
+  // Re-synthesising fabricated rows here made it impossible for the admin
+  // dashboard to ever show a true zero.
+  return getLocal<PageView[]>(STORAGE_KEYS.PAGE_VIEWS, []);
 }
 
 export function getMemberViews(): MemberView[] {
   initStorage();
-  const views = getLocal<MemberView[]>(STORAGE_KEYS.MEMBER_VIEWS, []);
-  if (!views || views.length === 0) {
-    return initialAnalyticsRaw.memberViews as MemberView[];
-  }
-  return views;
+  return getLocal<MemberView[]>(STORAGE_KEYS.MEMBER_VIEWS, []);
 }
 
 /**
@@ -1212,11 +1280,8 @@ export function trackSearch(
 
 export function getSearchViews(): SearchView[] {
   initStorage();
-  const views = getLocal<SearchView[]>(STORAGE_KEYS.SEARCH_VIEWS, []);
-  if (!views || views.length === 0) {
-    return ((initialAnalyticsRaw as any).searchViews || []) as SearchView[];
-  }
-  return views;
+  // Seeded by initStorage() on first run, so an empty array is a real zero.
+  return getLocal<SearchView[]>(STORAGE_KEYS.SEARCH_VIEWS, []);
 }
 
 /** Aggregated search insights: top queries, no-result queries, totals. */

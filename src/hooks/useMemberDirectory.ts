@@ -115,11 +115,26 @@ export function useMemberDirectory(options: UseMemberDirectoryOptions = {}): Use
   }, [trackView, viewPath]);
 
   // Mirror the background Supabase refresh performed by getMembers().
+  //
+  // The comparison uses row identity AND updated_at, not just the row count:
+  // an edit that changes a field without adding or removing a row (which is
+  // every ordinary edit) was previously never picked up, so the directory
+  // silently ignored server-side changes.
   useEffect(() => {
+    const snapshot = () =>
+      getPublicMembers()
+        .map((m) => `${m.id}:${m.updated_at || ''}:${m.approval_status || ''}:${m.visible ? 1 : 0}`)
+        .join('|');
+
+    let last = snapshot();
+
     const interval = window.setInterval(() => {
-      const next = getPublicMembers();
-      setMembers((prev) => (next.length && next.length !== prev.length ? next : prev));
+      const next = snapshot();
+      if (next === last) return;
+      last = next;
+      setMembers(getPublicMembers());
     }, 8000);
+
     return () => window.clearInterval(interval);
   }, []);
 

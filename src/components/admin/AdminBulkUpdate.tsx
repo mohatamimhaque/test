@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Member } from '../../types';
 import { getMembers, updateMember } from '../../lib/storage';
 import { useAuth } from '../../context/AuthContext';
@@ -30,11 +30,21 @@ export const AdminBulkUpdate: React.FC = () => {
     );
   });
 
+  // Only the first PAGE_SIZE rows are rendered in the table, so "select all"
+  // must cover exactly those. Selecting the whole filtered set (923) while only
+  // 100 are visible meant an admin could unknowingly rewrite 823 records they
+  // could not see.
+  const PAGE_SIZE = 100;
+  const selectableMembers = useMemo(
+    () => filteredMembers.slice(0, PAGE_SIZE),
+    [filteredMembers]
+  );
+
   const handleSelectAll = () => {
-    if (selectedIds.length === filteredMembers.length) {
+    if (selectedIds.length === selectableMembers.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredMembers.map(m => m.id));
+      setSelectedIds(selectableMembers.map(m => m.id));
     }
   };
 
@@ -181,7 +191,7 @@ export const AdminBulkUpdate: React.FC = () => {
             onClick={handleSelectAll}
             className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline"
           >
-            {selectedIds.length === filteredMembers.length ? 'Deselect All' : 'Select All Filtered'}
+            {selectedIds.length === selectableMembers.length ? 'Deselect All' : `Select All (first ${PAGE_SIZE})`}
           </button>
         </div>
 
@@ -197,7 +207,7 @@ export const AdminBulkUpdate: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredMembers.slice(0, 100).map(m => {
+              {selectableMembers.map(m => {
                 const isSelected = selectedIds.includes(m.id);
                 return (
                   <tr 
