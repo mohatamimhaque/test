@@ -836,28 +836,143 @@ function cacheJoinRequest(request: JoinRequest): void {
   setLocal(STORAGE_KEYS.JOIN_REQUESTS, requests.slice(0, STORAGE_LIMITS[STORAGE_KEYS.JOIN_REQUESTS]));
 }
 
-/** All join requests, newest first. Supabase first, localStorage as fallback. */
-export async function getJoinRequests(): Promise<JoinRequest[]> {
+/**
+ * How a queue read ended, so the admin panel can tell an empty queue apart
+ * from a read that never actually reached the database.
+ */
+export interface JoinRequestsResult {
+  requests: JoinRequest[];
+  /** True when the rows came from the live server rather than the cache. */
+  fromServer: boolean;
+  /**
+   * Set when the server could not be consulted. `empty` additionally records
+   * whether an empty list is trustworthy: RLS returns HTTP 200 + `[]` to a
+   * request that is not authorized, which is why an empty-but-unverified
+   * result must never be shown as "no applications".
+   */
+  error?: string;
+  /** False when the empty list may just be RLS filtering the caller out. */
+  trusted?: boolean;
+}
+
+/** Bounds a hung fetch so a spinner can never sit on screen forever. */
+const JOIN_READ_TIMEOUT_MS = 15000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
+/**
+ * All join requests, newest first.
+ *
+ * Prefers the serverless endpoint (`/api/join-requests`), which reads the table
+ * with the admin's own session token. RLS restricts the SELECT policy to
+ * `authenticated`, and the anon key is what ships in the bundle, so a direct
+ * browser read from an admin without a live session comes back as HTTP 200
+ * with an empty array. That silent `[]` is why the queue appeared to be empty.
+ *
+ * Falls back to the localStorage cache so the panel still renders offline, but
+ * reports `trusted: false` when the server was never successfully consulted.
+ */
+export async function getJoinRequestsDetailed(): Promise<JoinRequestsResult> {
   initStorage();
 
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from(JOIN_TABLE)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(500);
+  const cached = getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
 
-      if (!error && data) {
-        setLocal(STORAGE_KEYS.JOIN_REQUESTS, data as JoinRequest[]);
-        return data as JoinRequest[];
-      }
-    } catch (err) {
-      console.error('Error fetching join requests:', err);
-    }
+  if (!isSupabaseConfigured || !supabase) {
+    return { requests: cached, fromServer: false };
   }
 
-  return getLocal<JoinRequest[]>(STORAGE_KEYS.JOIN_REQUESTS, []);
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+
+    if (accessToken) {
+      const res = await withTimeout(
+        fetch('/api/join-requests', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        JOIN_READ_TIMEOUT_MS,
+        'The server took too long to respond'
+      );
+
+      // The SPA rewrite serves index.html with a 200 for unknown paths, so the
+      // content type must be checked before parsing or this throws SyntaxError.
+      if (!res.ok || !String(res.headers.get('content-type') || '').includes('application/json')) {
+        const detail = await res
+          .clone()
+          .json()
+          .catch(() => null) as { error?: string } | null;
+        const reason = detail?.error || `Read failed (${res.status})`;
+        console.error('Join request queue read failed:', reason);
+        notifySupabaseSyncFailure('join_request.read', new Error(reason));
+        return { requests: cached, fromServer: false, error: reason };
+      }
+
+      const payload = (await res.json()) as { requests?: JoinRequest[] };
+      const rows = Array.isArray(payload?.requests) ? payload.requests : [];
+
+      setLocal(STORAGE_KEYS.JOIN_REQUESTS, rows);
+      return { requests: rows, fromServer: true, trusted: true };
+    }
+
+    // No live session: the direct read below would be filtered out by RLS, so
+    // it is only worth attempting when there is nothing cached to fall back on.
+    // `supabase.from(...)` is a PostgREST builder that is thenable, so it is
+    // resolved first and the timeout applied to the resulting promise.
+    const query = supabase
+      .from(JOIN_TABLE)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    const direct = await withTimeout(
+      Promise.resolve(query),
+      JOIN_READ_TIMEOUT_MS,
+      'The database did not respond'
+    );
+
+    const { data, error } = direct;
+    if (!error && Array.isArray(data)) {
+      setLocal(STORAGE_KEYS.JOIN_REQUESTS, data as JoinRequest[]);
+      // An empty list here is NOT proof there are no applications: this read
+      // ran as `anon`, and RLS answers that with an empty array.
+      return { requests: data as JoinRequest[], fromServer: true, trusted: data.length > 0 };
+    }
+
+    return {
+      requests: cached,
+      fromServer: false,
+      error: (error as any)?.message || 'Could not read the application queue',
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not reach the database';
+    console.error('Error fetching join requests:', message);
+    return { requests: cached, fromServer: false, error: message };
+  }
+}
+
+/**
+ * Convenience wrapper returning just the rows.
+ *
+ * Prefer `getJoinRequestsDetailed()` in the admin panel: it also reports
+ * whether the result is trustworthy, which is what distinguishes an empty
+ * queue from a blocked read.
+ */
+export async function getJoinRequests(): Promise<JoinRequest[]> {
+  return (await getJoinRequestsDetailed()).requests;
 }
 
 /** The request belonging to one email, if any. */

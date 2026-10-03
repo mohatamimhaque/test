@@ -11,7 +11,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import { JoinRequest, JoinRequestStatus, Member } from '../../types';
 import {
-  getJoinRequests,
+  getJoinRequestsDetailed,
   approveJoinRequest,
   rejectJoinRequest,
   getPendingMembers,
@@ -54,6 +54,14 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [pendingMembers, setPendingMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  /**
+   * Why the queue may be incomplete, if it is.
+   *
+   * RLS answers a read it does not authorize with HTTP 200 and an empty array,
+   * which is visually identical to "no applications". Tracking this separately
+   * is what stops an unreadable queue from masquerading as an empty one.
+   */
+  const [loadIssue, setLoadIssue] = useState<string | null>(null);
   // Remembered: switching to the rejected queue and coming back should not
   // silently reset the admin to 'pending'.
   const [filter, setFilter] = usePersistentState<Filter>('admin_join_filter', FILTERS, 'pending');
@@ -65,10 +73,36 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [reqs, pending] = await Promise.all([getJoinRequests(), Promise.resolve(getPendingMembers())]);
-    setRequests(reqs);
-    setPendingMembers(pending);
-    setLoading(false);
+    try {
+      // getJoinRequestsDetailed never rejects, but a guard here keeps the
+      // spinner from ever being stranded if that ever changes.
+      const result = await getJoinRequestsDetailed();
+      setRequests(result.requests);
+
+      // Read synchronously right after: getPendingMembers() reads the member
+      // cache, and calling it before the queue resolves could capture a
+      // pre-refresh snapshot.
+      setPendingMembers(getPendingMembers());
+
+      // Only claim a problem when the empty/unverified result could be hiding
+      // applications. A verified read of zero rows is genuinely "none".
+      if (result.error) {
+        setLoadIssue(result.error);
+      } else if (!result.fromServer) {
+        setLoadIssue('Showing the last saved copy — the database could not be reached.');
+      } else if (result.trusted === false) {
+        setLoadIssue(
+          'Could not verify these applications with the database. Sign in again to load the full queue.'
+        );
+      } else {
+        setLoadIssue(null);
+      }
+    } catch (err) {
+      console.error('Failed to load join requests:', err);
+      setLoadIssue('Could not load applications.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -82,21 +116,25 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
   }, [toast]);
 
   /**
-   * Applications live in the staging table; anything that already reached the
-   * members table but is still unapproved is merged in so nothing falls
-   * through the cracks when Supabase has never been reachable.
+ * Every application the admin can act on, from both sources.
+   *
+   * The staging table holds all three statuses, so it must NOT be pre-filtered
+   * to 'pending': doing so made the Approved and Rejected tabs permanently
+   * empty even when reviewed rows existed. Anything that reached the members
+   * table without a staging entry is merged in so nothing falls through the
+   * cracks when Supabase has never been reachable.
+   *
+   * Negative ids mark rows synthesised from the members table, so the two
+   * sources cannot collide and approve/reject can tell them apart.
    */
-  const stagedOnly = requests.filter((r) => r.status === 'pending');
+  const merged = useMemo<JoinRequest[]>(() => {
+    const source: JoinRequest[] = [...requests];
 
-  const rows = useMemo(() => {
-    const source: JoinRequest[] = [...stagedOnly];
-
-    // Surface member-table rows that have no matching staging entry.
     for (const m of pendingMembers) {
       const status = normalizeApproval(m.approval_status);
       if (status === 'approved') continue;
       const hasStaging = source.some(
-        (r) => r.email.toLowerCase().trim() === m.email.toLowerCase().trim()
+        (r) => r.email?.toLowerCase().trim() === m.email?.toLowerCase().trim()
       );
       if (!hasStaging) {
         source.push({
@@ -121,7 +159,11 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
       }
     }
 
-    const byStatus = source.filter((r) => filter === 'all' || r.status === filter);
+    return source;
+  }, [requests, pendingMembers]);
+
+  const rows = useMemo(() => {
+    const byStatus = merged.filter((r) => filter === 'all' || r.status === filter);
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -139,29 +181,24 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
     return byStatus.sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-  }, [stagedOnly, pendingMembers, filter, searchQuery]);
+  }, [merged, filter, searchQuery]);
 
+  /**
+   * Tab counts across BOTH sources.
+   *
+   * Previously 'approved' was counted from `requests` alone while 'pending' and
+   * 'rejected' were counted from a pending-only list, so the three cards could
+   * never agree with what the tables below them actually displayed. All three
+   * are now derived from the same merged set.
+   */
   const counts = useMemo(() => {
-    const merged = [...stagedOnly];
-    for (const m of pendingMembers) {
-      const status = normalizeApproval(m.approval_status);
-      if (status === 'approved') continue;
-      if (!merged.some((r) => r.email.toLowerCase().trim() === m.email.toLowerCase().trim())) {
-        merged.push({
-          id: -(m.id),
-          email: m.email,
-          name: m.name,
-          status: status as JoinRequestStatus,
-          created_at: m.created_at,
-        });
-      }
-    }
+    const merged = requests;
     return {
       pending: merged.filter((r) => r.status === 'pending').length,
-      approved: requests.filter((r) => r.status === 'approved').length,
+      approved: merged.filter((r) => r.status === 'approved').length,
       rejected: merged.filter((r) => r.status === 'rejected').length,
     };
-  }, [stagedOnly, pendingMembers, requests]);
+  }, [merged]);
 
   const handleApprove = async (request: JoinRequest) => {
     setBusyId(request.id);
@@ -208,6 +245,14 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
             <AlertCircle className="w-4 h-4 shrink-0" />
           )}
           <span>{toast.text}</span>
+        </div>
+      )}
+
+      {/* Load warning: an unreadable queue must never look like an empty one. */}
+      {loadIssue && !loading && (
+        <div className="p-4 rounded-2xl text-xs font-semibold flex items-start gap-2 border bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="leading-relaxed">{loadIssue}</span>
         </div>
       )}
 
@@ -309,11 +354,12 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
               <Inbox className="w-7 h-7" />
             </div>
             <h3 className="text-sm font-bold font-outfit text-slate-800 dark:text-slate-200">
-              No {filter === 'all' ? '' : filter} applications
+              {loadIssue ? 'Applications could not be loaded' : `No ${filter === 'all' ? '' : filter} applications`}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-              Applications submitted through the public Join Archive page will appear here
-              for review.
+              {loadIssue
+                ? 'This list is incomplete, not empty. Use Refresh to try again.'
+                : 'Applications submitted through the public Join Archive page will appear here for review.'}
             </p>
           </div>
         ) : (
