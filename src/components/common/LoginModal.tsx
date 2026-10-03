@@ -141,10 +141,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
-      
-      {/* Modal Container */}
-      <div className="w-full max-w-md bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-slate-700/60 rounded-3xl shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9),0_0_50px_rgba(79,70,229,0.18)] overflow-hidden relative text-white backdrop-blur-2xl transition-all duration-300">
+    <div className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-300">
+      <div className="min-h-full flex flex-col items-center justify-center my-auto py-4">
+        
+        {/* Modal Container */}
+        <div className="w-full max-w-md bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-slate-700/60 rounded-3xl shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9),0_0_50px_rgba(79,70,229,0.18)] overflow-hidden relative text-white backdrop-blur-2xl transition-all duration-300">
         
         {/* Ambient Radial Glowing Orbs */}
         <div className="absolute -top-24 -left-24 w-56 h-56 bg-primary-500/25 blur-[90px] pointer-events-none rounded-full" />
@@ -347,9 +348,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* 8-Digit Grid Input Box Layout (4 + 4) */}
-                <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+                <div className="flex items-center justify-between gap-1 sm:gap-2">
                   {/* First 4 Digits */}
-                  <div className="flex gap-1.5 sm:gap-2 flex-1">
+                  <div className="flex gap-1 sm:gap-2 flex-1 min-w-0">
                     {[0, 1, 2, 3].map((idx) => (
                       <input
                         key={idx}
@@ -362,7 +363,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         onChange={(e) => handleDigitChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
                         onPaste={handlePaste}
-                        className={`w-full aspect-square text-center text-lg sm:text-xl font-mono font-bold rounded-xl border transition-all shadow-inner focus:outline-none ${
+                        className={`w-full aspect-square text-center text-sm sm:text-xl font-mono font-bold rounded-lg sm:rounded-xl border transition-all shadow-inner focus:outline-none p-0 ${
                           otpDigits[idx]
                             ? 'bg-primary-950/40 border-primary-500 text-primary-200 shadow-[0_0_12px_rgba(99,102,241,0.25)]'
                             : 'bg-slate-800/70 border-slate-700/80 text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30'
@@ -372,12 +373,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   </div>
 
                   {/* Middle Separator */}
-                  <div className="flex items-center justify-center px-1">
-                    <span className="w-2 h-0.5 bg-slate-600 rounded-full" />
+                  <div className="flex items-center justify-center px-0.5 sm:px-1">
+                    <span className="w-1.5 sm:w-2 h-0.5 bg-slate-600 rounded-full" />
                   </div>
 
                   {/* Second 4 Digits */}
-                  <div className="flex gap-1.5 sm:gap-2 flex-1">
+                  <div className="flex gap-1 sm:gap-2 flex-1 min-w-0">
                     {[4, 5, 6, 7].map((idx) => (
                       <input
                         key={idx}
@@ -390,7 +391,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         onChange={(e) => handleDigitChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
                         onPaste={handlePaste}
-                        className={`w-full aspect-square text-center text-lg sm:text-xl font-mono font-bold rounded-xl border transition-all shadow-inner focus:outline-none ${
+                        className={`w-full aspect-square text-center text-sm sm:text-xl font-mono font-bold rounded-lg sm:rounded-xl border transition-all shadow-inner focus:outline-none p-0 ${
                           otpDigits[idx]
                             ? 'bg-primary-950/40 border-primary-500 text-primary-200 shadow-[0_0_12px_rgba(99,102,241,0.25)]'
                             : 'bg-slate-800/70 border-slate-700/80 text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30'
@@ -447,10 +448,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
             <span>End-to-End Encrypted Supabase Passcode Auth</span>
           </div>
-
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 

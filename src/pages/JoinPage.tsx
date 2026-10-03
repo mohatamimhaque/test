@@ -373,8 +373,8 @@ export const JoinPage: React.FC = () => {
                   </div>
 
                   {/* 8 Digit Input Grid */}
-                  <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-                    <div className="flex gap-1.5 sm:gap-2 flex-1">
+                  <div className="flex items-center justify-between gap-1 sm:gap-2">
+                    <div className="flex gap-1 sm:gap-2 flex-1 min-w-0">
                       {[0, 1, 2, 3].map((idx) => (
                         <input
                           key={idx}
@@ -387,14 +387,14 @@ export const JoinPage: React.FC = () => {
                           onChange={(e) => handleDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(idx, e)}
                           onPaste={handlePaste}
-                          className="w-full aspect-square text-center text-lg sm:text-xl font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-900 dark:text-white shadow-sm"
+                          className="w-full aspect-square text-center text-sm sm:text-xl font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-900 dark:text-white shadow-sm p-0"
                         />
                       ))}
                     </div>
 
-                    <span className="text-slate-400 font-bold text-lg px-0.5">-</span>
+                    <span className="text-slate-400 font-bold text-sm sm:text-lg px-0.5">-</span>
 
-                    <div className="flex gap-1.5 sm:gap-2 flex-1">
+                    <div className="flex gap-1 sm:gap-2 flex-1 min-w-0">
                       {[4, 5, 6, 7].map((idx) => (
                         <input
                           key={idx}
@@ -407,7 +407,7 @@ export const JoinPage: React.FC = () => {
                           onChange={(e) => handleDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(idx, e)}
                           onPaste={handlePaste}
-                          className="w-full aspect-square text-center text-lg sm:text-xl font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-900 dark:text-white shadow-sm"
+                          className="w-full aspect-square text-center text-sm sm:text-xl font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-900 dark:text-white shadow-sm p-0"
                         />
                       ))}
                     </div>

@@ -47,13 +47,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         {/* Filter Dropdowns & Layout Switches */}
-        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap justify-between md:justify-end">
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-between md:justify-end">
           
           {/* Blood Group Select */}
           <select
             value={selectedBlood}
             onChange={(e) => onBloodChange(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-200"
+            className="w-full sm:w-auto px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-200 truncate"
           >
             <option value="">All Blood Groups</option>
             {BLOOD_GROUPS.map(b => (
@@ -65,7 +65,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <select
             value={selectedSort}
             onChange={(e) => onSortChange(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-200"
+            className="w-full sm:w-auto px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-slate-800 dark:text-slate-200 truncate"
           >
             <option value="name">Sort by Name (A-Z)</option>
             <option value="id_asc">Sort by ID (Ascending)</option>
@@ -74,28 +74,30 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
 
           {/* Layout Toggle Buttons */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div className="col-span-2 sm:col-span-1 flex items-center justify-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
             <button
               onClick={() => onLayoutChange('grid')}
-              className={`p-1.5 rounded-lg text-xs transition-colors ${
+              className={`flex-1 sm:flex-initial p-1.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 ${
                 layout === 'grid'
-                  ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm font-semibold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Grid View"
             >
               <LayoutGrid className="w-4 h-4" />
+              <span className="sm:hidden text-[11px]">Grid</span>
             </button>
             <button
               onClick={() => onLayoutChange('list')}
-              className={`p-1.5 rounded-lg text-xs transition-colors ${
+              className={`flex-1 sm:flex-initial p-1.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 ${
                 layout === 'list'
-                  ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  ? 'bg-white dark:bg-slate-700 text-primary-600 dark:text-primary-400 shadow-sm font-semibold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="List View"
             >
               <List className="w-4 h-4" />
+              <span className="sm:hidden text-[11px]">List</span>
             </button>
           </div>
 
