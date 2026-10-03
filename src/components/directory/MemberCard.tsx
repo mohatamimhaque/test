@@ -31,7 +31,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, layout = 'grid',
               src={photoUrl || defaultAvatar} 
               alt={member.name}
               className="w-full h-full object-cover"
-              loading="lazy"
+              decoding="async"
               onLoad={() => setImgLoaded(true)}
               onError={(e) => {
                 setImgLoaded(true);
@@ -96,7 +96,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({ member, layout = 'grid',
           src={photoUrl || defaultAvatar} 
           alt={member.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
+          decoding="async"
           onLoad={() => setImgLoaded(true)}
           onError={(e) => {
             setImgLoaded(true);

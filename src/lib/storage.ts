@@ -236,6 +236,48 @@ function reclaimStorage(failedKey: string): boolean {
 
 const SOFT_STORAGE_BUDGET_BYTES = 3.5 * 1024 * 1024;
 
+const SUPABASE_SYNC_KEY = 'cse_archive_supabase_sync_issues_v1';
+
+/**
+ * Records a failed Supabase write so the admin UI can surface it.
+ *
+ * The app is localStorage-first and treats Supabase as a background mirror, so
+ * a failed sync used to be invisible: the admin saw their change appear and had
+ * no idea it never reached the database. Most commonly this is an unapplied
+ * migration (PostgREST code PGRST204), which is permanent rather than transient.
+ */
+function notifySupabaseSyncFailure(action: string, error: unknown): void {
+  try {
+    const code = (error as any)?.code || '';
+    const message = String((error as any)?.message || error || 'Unknown error');
+    const issues = getLocal<{ action: string; code: string; message: string; at: string }[]>(
+      SUPABASE_SYNC_KEY,
+      []
+    );
+
+    // Collapse repeats so one broken migration cannot flood the list.
+    if (issues.some((i) => i.action === action && i.code === code)) return;
+
+    issues.unshift({ action, code, message, at: new Date().toISOString() });
+    localStorage.setItem(SUPABASE_SYNC_KEY, JSON.stringify(issues.slice(0, 20)));
+  } catch {
+    // Never let diagnostics storage break the actual operation.
+  }
+}
+
+/** Pending Supabase sync problems, newest first. Empty when healthy. */
+export function getSupabaseSyncIssues(): { action: string; code: string; message: string; at: string }[] {
+  return getLocal(SUPABASE_SYNC_KEY, []);
+}
+
+export function clearSupabaseSyncIssues(): void {
+  try {
+    localStorage.removeItem(SUPABASE_SYNC_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * One-time compaction of history that was written before the caps existed.
  *
@@ -459,7 +501,15 @@ export function updateMember(id: number, updates: Partial<Member>, actorEmail?: 
       })
       .eq('id', id)
       .then(({ error }) => {
-        if (error) console.error('Failed to sync member update to Supabase:', error);
+        if (error) {
+          // PGRST204 means the table is missing a column — almost always an
+          // unapplied migration, and permanent until it is run.
+          const hint = (error as any).code === 'PGRST204'
+            ? ' Run supabase/migrations/003_members_missing_columns.sql.'
+            : '';
+          console.error('Failed to sync member update to Supabase:' + hint, error);
+          notifySupabaseSyncFailure('member.update', error);
+        }
       });
   }
 
@@ -525,7 +575,13 @@ export function createMember(newMember: Omit<Member, 'id' | 'legacy_id' | 'creat
         updated_at: created.updated_at,
       })
       .then(({ error }) => {
-        if (error) console.error('Failed to sync member creation to Supabase:', error);
+        if (error) {
+          const hint = (error as any).code === 'PGRST204'
+            ? ' Run supabase/migrations/003_members_missing_columns.sql.'
+            : '';
+          console.error('Failed to sync member creation to Supabase:' + hint, error);
+          notifySupabaseSyncFailure('member.create', error);
+        }
       });
   }
 
@@ -552,7 +608,10 @@ export function deleteMember(id: number, actorEmail?: string): void {
       .delete()
       .eq('id', id)
       .then(({ error }) => {
-        if (error) console.error('Failed to sync member deletion to Supabase:', error);
+        if (error) {
+          console.error('Failed to sync member deletion to Supabase:', error);
+          notifySupabaseSyncFailure('member.delete', error);
+        }
       });
   }
 
@@ -638,6 +697,22 @@ export async function submitJoinRequest(
       if ((error as any).code === '23505') {
         return { success: false, message: 'A request from this email is already awaiting review.' };
       }
+
+      // PGRST204 = PostgREST's schema cache has no such column. This is a
+      // deployment problem, not a transient network blip, and it is permanent
+      // until the migration below is run. Say so instead of claiming the
+      // server was merely unreachable.
+      const code = (error as any).code;
+      if (code === 'PGRST204' || /schema cache|column .* of/i.test(error.message || '')) {
+        console.error('Join requests table is missing columns. Run supabase/migrations/002:', error);
+        return {
+          success: false,
+          message:
+            'This form is not available yet — the database is missing required columns. ' +
+            'Please contact the department administrator.',
+        };
+      }
+
       // RLS/network failure: fall back to local-only so the applicant isn't
       // left hanging, and surface it so the admin knows to re-check.
       console.error('Failed to submit join request to Supabase:', error);
@@ -834,7 +909,13 @@ async function setJoinRequestStatus(
 
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.from(JOIN_TABLE).update(patch).eq('id', requestId);
-    if (error) console.error('Failed to update join request status:', error);
+    if (error) {
+      const hint = (error as any).code === 'PGRST204'
+        ? ' Run supabase/migrations/002_join_requests_missing_columns.sql.'
+        : '';
+      console.error('Failed to update join request status:' + hint, error);
+      notifySupabaseSyncFailure('join_request.update', error);
+    }
   }
 }
 

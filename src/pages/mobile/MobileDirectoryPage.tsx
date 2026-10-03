@@ -333,7 +333,13 @@ const MobileGridCard: React.FC<{ member: Member; onSelect: (m: Member) => void }
         <img
           src={url || defaultAvatar}
           alt={member.name}
-          loading="lazy"
+          /*
+           * No loading="lazy": `url` is assigned asynchronously after the
+           * presigned R2 URL is generated, and an <img> created with lazy
+           * loading never re-evaluates when the src changes to a value that is
+           * already in the viewport. The card would spin forever.
+           */
+          decoding="async"
           className="w-full h-full object-cover"
           onError={(e) => {
             (e.target as HTMLImageElement).src = defaultAvatar;

@@ -128,7 +128,21 @@ export const Avatar: React.FC<AvatarProps> = ({
         <img
           src={src}
           alt={alt}
-          loading="lazy"
+          /*
+           * Deliberately NOT loading="lazy".
+           *
+           * The src arrives asynchronously (usePhotoUrl presigns the R2 URL
+           * after mount). When an <img> is created already carrying
+           * loading="lazy", Chrome evaluates the lazy-load candidacy against
+           * the *initial* URL state, and because the presigned URL is assigned
+           * after the element is already in the viewport the load is never
+           * re-triggered — the image stays at naturalWidth 0 and the card
+           * shows its spinner forever.
+           *
+           * Avatars are small (40–169px) and cached in memory by
+           * getPresignedPhotoUrl, so eager loading costs little.
+           */
+          decoding="async"
           className="w-full h-full object-cover"
           onError={(e) => {
             (e.target as HTMLImageElement).style.visibility = 'hidden';
