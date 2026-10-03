@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { AdminSidebar, AdminTab } from '../components/admin/AdminSidebar';
+import { AdminSidebar, AdminTab, ADMIN_TABS } from '../components/admin/AdminSidebar';
+import { usePersistentState } from '../hooks/usePersistentState';
 import { AdminDashboardOverview } from '../components/admin/AdminDashboardOverview';
 import { AdminMembersManager } from '../components/admin/AdminMembersManager';
 import { AdminJoinRequestsManager } from '../components/admin/AdminJoinRequestsManager';
@@ -19,7 +20,13 @@ interface AdminPageProps {
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onOpenLoginModal }) => {
   const { user, isAdmin, isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  // Remembered so moving between admin sections (or reloading) keeps the admin
+  // on the tab they were working in.
+  const [activeTab, setActiveTab] = usePersistentState<AdminTab>(
+    'admin_active_tab',
+    ADMIN_TABS,
+    'overview'
+  );
 
   if (!isAdmin) {
     return (

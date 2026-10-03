@@ -26,6 +26,26 @@ export type AdminTab =
   | 'storage' 
   | 'audit_logs';
 
+/**
+ * Runtime list of every valid tab.
+ *
+ * `usePersistentState` validates the stored value against this, so a stale or
+ * hand-edited localStorage entry can never leave the admin panel rendering an
+ * unknown tab. Keep in sync with the `AdminTab` union above.
+ */
+export const ADMIN_TABS: readonly AdminTab[] = [
+  'overview',
+  'members',
+  'join_requests',
+  'bulk_import',
+  'bulk_update',
+  'administrators',
+  'analytics',
+  'appearance',
+  'storage',
+  'audit_logs',
+] as const;
+
 interface AdminSidebarProps {
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;

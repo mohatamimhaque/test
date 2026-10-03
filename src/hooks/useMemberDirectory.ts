@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Member } from '../types';
 import { getPublicMembers, trackPageView, trackSearch } from '../lib/storage';
+import { usePersistentState } from './usePersistentState';
 
 export type DirectoryLayout = 'grid' | 'list';
 export type SortKey = 'name' | 'id_asc' | 'id_desc' | 'recent';
@@ -76,6 +77,9 @@ function matchesQuery(member: Member, query: string): boolean {
   );
 }
 
+const LAYOUTS: readonly DirectoryLayout[] = ['grid', 'list'];
+const SORTS: readonly SortKey[] = ['name', 'id_asc', 'id_desc', 'recent'];
+
 export function useMemberDirectory(options: UseMemberDirectoryOptions = {}): UseMemberDirectoryResult {
   const {
     urlQuery,
@@ -90,9 +94,18 @@ export function useMemberDirectory(options: UseMemberDirectoryOptions = {}): Use
 
   const [members, setMembers] = useState<Member[]>(() => getPublicMembers());
   const [searchQuery, setSearchQueryState] = useState<string>(initialQuery);
-  const [selectedBlood, setSelectedBlood] = useState<string>('');
-  const [selectedSort, setSelectedSort] = useState<SortKey>('name');
-  const [layout, setLayout] = useState<DirectoryLayout>('grid');
+
+  // Persisted so grid/list, the sort order and the blood filter survive a
+  // refresh and a return visit. Shared by the desktop and mobile directories,
+  // so the choice follows the visitor between the two UIs.
+  const [selectedBlood, setSelectedBlood] = usePersistentState<string>(
+    'directory_blood',
+    ['', ...BLOOD_GROUPS],
+    ''
+  );
+  const [selectedSort, setSelectedSort] = usePersistentState<SortKey>('directory_sort', SORTS, 'name');
+  const [layout, setLayout] = usePersistentState<DirectoryLayout>('directory_layout', LAYOUTS, 'grid');
+
   const [page, setPage] = useState(1);
 
   useEffect(() => {

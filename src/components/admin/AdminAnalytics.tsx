@@ -7,6 +7,7 @@ import {
   getSearchViews,
   getSearchAnalytics,
 } from '../../lib/storage';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import {
   BarChart3,
   Eye,
@@ -24,8 +25,22 @@ import {
 
 type AnalyticsTab = 'all' | 'page_views' | 'member_views' | 'searches' | 'most_viewed';
 
+const ANALYTICS_TABS: readonly AnalyticsTab[] = [
+  'all',
+  'page_views',
+  'member_views',
+  'searches',
+  'most_viewed',
+] as const;
+
 export const AdminAnalytics: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('all');
+  // Remembered so an admin comparing searches against page views does not lose
+  // the sub-tab every time they leave and return to Analytics.
+  const [activeTab, setActiveTab] = usePersistentState<AnalyticsTab>(
+    'admin_analytics_tab',
+    ANALYTICS_TABS,
+    'all'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 

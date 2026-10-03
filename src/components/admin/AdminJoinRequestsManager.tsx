@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import { JoinRequest, JoinRequestStatus, Member } from '../../types';
 import {
   getJoinRequests,
@@ -39,6 +40,8 @@ import {
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all';
 
+const FILTERS: readonly Filter[] = ['pending', 'approved', 'rejected', 'all'] as const;
+
 interface AdminJoinRequestsManagerProps {
   onNavigateTab?: (tab: 'members' | 'join_requests') => void;
 }
@@ -51,7 +54,9 @@ export const AdminJoinRequestsManager: React.FC<AdminJoinRequestsManagerProps> =
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [pendingMembers, setPendingMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<Filter>('pending');
+  // Remembered: switching to the rejected queue and coming back should not
+  // silently reset the admin to 'pending'.
+  const [filter, setFilter] = usePersistentState<Filter>('admin_join_filter', FILTERS, 'pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [busyId, setBusyId] = useState<number | string | null>(null);
   const [rejecting, setRejecting] = useState<JoinRequest | null>(null);
