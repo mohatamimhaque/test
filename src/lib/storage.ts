@@ -122,17 +122,16 @@ function migrateSettingsCopy(): void {
   }
 }
 
-const DEFAULT_ADMINS: AdminUser[] = [
-  {
-    id: 'admin-super-mohatamim',
-    user_id: 'user-super-mohatamim',
-    email: 'mohatamimhaque@outlook.com',
-    role: 'super_admin',
-    status: 'active',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
-];
+/**
+ * Roster shape used until the server roster has been fetched at least once.
+ *
+ * This is deliberately empty. It used to contain a hardcoded super-admin
+ * record, which shipped the owner's email address in the public bundle and
+ * meant an empty or tampered cache still granted admin. The authoritative
+ * list lives in Postgres (`cse_archive_admin_users`, migration 004); this
+ * constant now only carries the shape for offline first paint.
+ */
+const EMPTY_ADMIN_ROSTER: AdminUser[] = [];
 
 // Helper to safely read JSON from localStorage
 function getLocal<T>(key: string, defaultValue: T): T {
@@ -343,7 +342,9 @@ export function initStorage(): void {
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.ADMIN_USERS)) {
-    setLocal(STORAGE_KEYS.ADMIN_USERS, DEFAULT_ADMINS);
+    // Seeded empty: admin status now comes from Postgres only. Previously this
+    // wrote a hardcoded super-admin into localStorage on every fresh browser.
+    setLocal(STORAGE_KEYS.ADMIN_USERS, EMPTY_ADMIN_ROSTER);
   }
 
   if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
@@ -1039,71 +1040,90 @@ export function updateSiteSettings(settings: Partial<SiteSettings>, actorEmail?:
 
 
 // ADMIN MANAGEMENT
+/**
+ * Administrators, read from Postgres.
+ *
+ * This used to be a localStorage array with a hardcoded super-admin fallback,
+ * which meant anyone could edit it in DevTools and grant themselves the admin
+ * console. The roster now lives in `cse_archive_admin_users`, which the browser
+ * cannot edit. The localStorage copy is only a read-through cache for offline
+ * use, and it is always refreshed from the server when reachable.
+ */
 export function getAdminUsers(): AdminUser[] {
   initStorage();
-  return getLocal<AdminUser[]>(STORAGE_KEYS.ADMIN_USERS, DEFAULT_ADMINS);
+  const cached = getLocal<AdminUser[]>(STORAGE_KEYS.ADMIN_USERS, EMPTY_ADMIN_ROSTER);
+
+  if (isSupabaseConfigured && supabase) {
+    // Fire-and-forget refresh; the synchronous return keeps admin surfaces
+    // rendering instantly on first paint.
+    supabase
+      .from('cse_archive_admin_users')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (error || !data) {
+          if (error) console.error('Failed to load admin roster:', error);
+          return;
+        }
+        setLocal(STORAGE_KEYS.ADMIN_USERS, data as AdminUser[]);
+      });
+  }
+
+  return cached;
 }
 
+/**
+ * Looks up an administrator by email.
+ *
+ * No hardcoded identity: the roster is the only source. A hardcoded super admin
+ * here meant anyone who edited localStorage could match it.
+ */
 export function getAdminByEmail(email: string): AdminUser | undefined {
   if (!email) return undefined;
   const cleanEmail = email.toLowerCase().trim();
-  
-  if (cleanEmail === 'mohatamimhaque@outlook.com') {
-    return {
-      id: 'admin-super-mohatamim',
-      user_id: 'user-super-mohatamim',
-      email: 'mohatamimhaque@outlook.com',
-      role: 'super_admin',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-  }
-
-  return getAdminUsers().find(a => a.email.toLowerCase() === cleanEmail);
+  return getAdminUsers().find(
+    (a) => a.email?.toLowerCase().trim() === cleanEmail && a.status === 'active'
+  );
 }
 
 export function addAdminUser(email: string, role: 'admin' | 'super_admin', actorEmail: string): AdminUser {
   const admins = getAdminUsers();
-  const existing = admins.find(a => a.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    existing.role = role;
-    existing.status = 'active';
-    existing.updated_at = new Date().toISOString();
-    setLocal(STORAGE_KEYS.ADMIN_USERS, admins);
-    logAudit({
-      actor_email: actorEmail,
-      action: 'admin.update',
-      target_type: 'admin_user',
-      target_id: existing.id,
-      details: { email, role, status: 'active' }
-    });
-    return existing;
-  }
+  const cleanEmail = email.toLowerCase().trim();
+  const existing = admins.find(a => a.email?.toLowerCase() === cleanEmail);
 
-  const newAdmin: AdminUser = {
-    id: 'admin-' + Date.now(),
-    user_id: 'user-' + Date.now(),
-    email: email.toLowerCase(),
-    role,
-    status: 'active',
-    created_by: actorEmail,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  const next: AdminUser = existing
+    ? { ...existing, role, status: 'active', updated_at: new Date().toISOString() }
+    : {
+        id: 'admin-' + Date.now(),
+        user_id: 'user-' + Date.now(),
+        email: cleanEmail,
+        role,
+        status: 'active',
+        created_by: actorEmail,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-  admins.push(newAdmin);
-  setLocal(STORAGE_KEYS.ADMIN_USERS, admins);
+  const updated = existing
+    ? admins.map(a => (a.id === existing.id ? next : a))
+    : [...admins, next];
+
+  // Optimistic local cache update so the table reflects the change immediately,
+  // then reconcile with the server. The roster has no browser write policy
+  // (migration 004), so the serverless function is the only thing that can
+  // actually persist this; a direct anon-key write is rejected by RLS.
+  setLocal(STORAGE_KEYS.ADMIN_USERS, updated);
+  syncAdminRoster({ action: 'add', email: cleanEmail, role, actorEmail });
 
   logAudit({
     actor_email: actorEmail,
-    action: 'admin.create',
+    action: existing ? 'admin.update' : 'admin.create',
     target_type: 'admin_user',
-    target_id: newAdmin.id,
-    details: { email: newAdmin.email, role }
+    target_id: next.id,
+    details: { email: next.email, role, status: 'active' }
   });
 
-  return newAdmin;
+  return next;
 }
 
 export function toggleAdminStatus(id: string, status: 'active' | 'disabled', actorEmail: string): void {
@@ -1114,6 +1134,7 @@ export function toggleAdminStatus(id: string, status: 'active' | 'disabled', act
   admins[index].status = status;
   admins[index].updated_at = new Date().toISOString();
   setLocal(STORAGE_KEYS.ADMIN_USERS, admins);
+  syncAdminRoster({ action: 'set_status', id, status, actorEmail });
 
   logAudit({
     actor_email: actorEmail,
@@ -1122,6 +1143,67 @@ export function toggleAdminStatus(id: string, status: 'active' | 'disabled', act
     target_id: id,
     details: { email: admins[index].email, status }
   });
+}
+
+/**
+ * Persists an admin-roster change through the serverless function.
+ *
+ * Roster writes go through `/api/admin-roster` rather than PostgREST because the
+ * table has no browser write policy — that is deliberate. This function
+ * re-checks the caller's Supabase session against the roster before writing.
+ *
+ * Failures are surfaced through the sync-issue banner so a rejected change is
+ * visible rather than silently reverted on the next refresh. On success the
+ * authoritative roster is re-read from the server.
+ */
+async function syncAdminRoster(payload: {
+  action: 'add' | 'set_status';
+  email?: string;
+  role?: 'admin' | 'super_admin';
+  id?: string;
+  status?: 'active' | 'disabled';
+  actorEmail: string;
+}): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+      notifySupabaseSyncFailure('admin.write', new Error('Not signed in'));
+      return;
+    }
+
+    const res = await fetch('/api/admin-roster', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      // A missing endpoint (SPA rewrite) returns index.html with a 200, so
+      // guard the content type before parsing.
+      const detail = await res
+        .clone()
+        .json()
+        .catch(() => null) as { error?: string } | null;
+      notifySupabaseSyncFailure(
+        'admin.write',
+        new Error(detail?.error || `Roster update failed (${res.status})`)
+      );
+      // Re-read so the local cache stops showing a change the server refused.
+      getAdminUsers();
+      return;
+    }
+
+    getAdminUsers();
+  } catch (err) {
+    notifySupabaseSyncFailure('admin.write', err as Error);
+    getAdminUsers();
+  }
 }
 
 // AUDIT LOGS

@@ -45,12 +45,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const m = getMemberByEmail(email);
     setMember(m || null);
 
-    // Check admin authorization
-    const a = getAdminByEmail(email);
-    if (a && a.status === 'active') {
-      setAdmin(a);
+    // Check admin authorization against the cached roster immediately so the
+    // console is not gated on a network round trip, then verify with the server.
+    const cached = getAdminByEmail(email);
+    if (cached && cached.status === 'active') {
+      setAdmin(cached);
     } else {
       setAdmin(null);
+    }
+
+    verifyAdminAgainstServer(email);
+  };
+
+  /**
+   * Confirms admin status with Postgres rather than trusting localStorage.
+   *
+   * `getAdminByEmail()` reads a cached roster, which anyone can edit in
+   * DevTools. Migration 005 is what actually protects the data — non-admin
+   * rows are refused at the database — but trusting the cache alone would still
+   * render a fake admin console that quietly fails on every action. Verifying
+   * against the roster means the UI shows the truth.
+   */
+  const verifyAdminAgainstServer = async (email: string) => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionEmail = sessionData?.session?.user?.email;
+
+      // No live session: this is a stale cached identity. Supabase is the only
+      // thing that can actually authorize a write, so a cached grant here would
+      // render a console where every action fails. Show the signed-out state.
+      if (!sessionEmail) {
+        setAdmin(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('cse_archive_admin_users')
+        .select('*')
+        .eq('email', email.toLowerCase().trim())
+        .limit(1);
+
+      if (error) return; // Network problem: leave the cached state alone.
+
+      if (Array.isArray(data) && data.length > 0) {
+        setAdmin(data[0] as AdminUser);
+      } else {
+        // Confirmed absent from the roster. Clear any cached grant.
+        setAdmin(null);
+      }
+    } catch {
+      // Network problem: keep whatever the cache said rather than locking an
+      // admin out mid-session.
     }
   };
 
@@ -109,9 +156,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const member = getMemberByEmail(cleanEmail);
     const admin = getAdminByEmail(cleanEmail);
-    const isSuperAdmin = cleanEmail === 'mohatamimhaque@outlook.com';
 
-    if (!member && !admin && !isSuperAdmin) {
+    // No hardcoded super-admin identity here. The roster in
+    // `cse_archive_admin_users` is the only source of admin status, so an
+    // arbitrary email cannot be treated as an administrator.
+    if (!member && !admin) {
       return {
         success: false,
         message: `No registered alumni profile or account was found for ${cleanEmail}.`
@@ -145,8 +194,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Verification failed.' };
     }
 
-    // Simulation mode (Any 6-8 digit OTP or 12345678)
+    // Simulation mode (only reachable when Supabase is not configured).
+    //
+    // This accepts any 4+ digit code, which means no identity proof at all.
+    // It is therefore restricted to member profiles and can never establish
+    // admin: a fake sign-in that grants the admin console would be a trivial
+    // bypass in any deployment that has Supabase credentials but falls through
+    // to this path.
     if (otp && otp.trim().length >= 4) {
+      if (getAdminByEmail(email)) {
+        return {
+          success: false,
+          message: 'Administrator sign-in requires the configured mail service.',
+        };
+      }
       localStorage.setItem('cse_archive_auth_email', email);
       loadUserState(email);
       return { success: true };
@@ -218,6 +279,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let email = 'admin@cse-archive.edu';
     if (role === 'admin') email = 'moderator@cse-archive.edu';
     if (role === 'member') email = memberEmail || 'kmfarhad.1110@gmail.com';
+
+    // Demo logins only exist when Supabase is not configured at all. With a
+    // real backend this would mint a local admin grant that the database never
+    // honoured, so it is refused rather than half-working.
+    if (isSupabaseConfigured && supabase) return;
 
     localStorage.setItem('cse_archive_auth_email', email);
     loadUserState(email);

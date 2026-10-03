@@ -1,44 +1,48 @@
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import React, { useState, useEffect } from 'react';
 
 /**
- * Cloudflare R2 configuration.
+ * Cloudflare R2 photo delivery.
  *
- * These values are read from Vite env vars ONLY. They are intentionally not
- * hardcoded: this module is bundled into the public browser bundle, so any
- * literal secret committed here would be publicly readable by anyone who loads
- * the site. Set the values in `.env` (local) and in the Vercel project
- * environment variables (production):
+ * Photos live in a private R2 bucket and are served through short-lived
+ * presigned URLs.
  *
- *   VITE_R2_ENDPOINT
- *   VITE_R2_ACCESS_KEY_ID
- *   VITE_R2_SECRET_ACCESS_KEY
- *   VITE_R2_BUCKET_NAME
+ * SECURITY: the signing credential is NOT in this bundle.
+ * It used to be read from VITE_R2_SECRET_ACCESS_KEY, but Vite inlines every
+ * VITE_-prefixed variable into the public JavaScript, which handed the full
+ * bucket credential to anyone who loaded the site. Signing now happens in the
+ * serverless function at `/api/photo-url`, which reads server-only env vars.
  *
- * Until they are provided the app degrades gracefully to the generated SVG
- * avatars instead of failing.
+ * Server-side env vars required (no VITE_ prefix):
+ *   R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
+ *
+ * The bucket itself stays private; this only mints URLs for keys the visitor
+ * could already read from the public member records.
+ *
+ * If the endpoint is unavailable the app degrades to the generated SVG
+ * avatars rather than showing broken images.
  */
-const R2_ENDPOINT = import.meta.env.VITE_R2_ENDPOINT || '';
-const R2_ACCESS_KEY_ID = import.meta.env.VITE_R2_ACCESS_KEY_ID || '';
-const R2_SECRET_ACCESS_KEY = import.meta.env.VITE_R2_SECRET_ACCESS_KEY || '';
-const R2_BUCKET_NAME = import.meta.env.VITE_R2_BUCKET_NAME || 'cse-alumni';
 
-/** True only when all four R2 values are present. */
-export const isR2Configured = Boolean(
-  R2_ENDPOINT && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET_NAME
-);
+/** Server endpoint that signs a photo key into a temporary URL. */
+const PRESIGN_ENDPOINT = '/api/photo-url';
 
-const s3Client = isR2Configured
-  ? new S3Client({
-      region: 'auto',
-      endpoint: R2_ENDPOINT,
-      credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_SECRET_ACCESS_KEY,
-      },
-    })
-  : null;
+/**
+ * Derives the R2 object key from whatever a member record holds.
+ *
+ * Accepts a bare key ("photos/p001_x33.jpeg") or a full URL and returns the
+ * key, which mirrors `toObjectKey()` in the API function.
+ */
+export function toPhotoKey(photoKeyOrUrl?: string | null): string {
+  let key = String(photoKeyOrUrl || '').trim();
+  if (!key || key.startsWith('data:')) return '';
+
+  key = key.replace(/^https?:\/\/[^/]+\//, '').replace(/^\/+/, '');
+
+  // Only ever sign objects under the photos prefix, and never a traversal path.
+  if (key.includes('..') || key.includes('\\')) return '';
+  if (!key.startsWith('photos/')) return '';
+
+  return key;
+}
 
 export const DEFAULT_AVATAR_MALE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="%231e293b"/><stop offset="100%" stop-color="%230f172a"/></linearGradient></defs><rect width="200" height="200" fill="url(%23g)"/><circle cx="100" cy="72" r="36" fill="%2338bdf8"/><path d="M40 180 c0-36 25-54 60-54 s60 18 60 54 z" fill="%2338bdf8"/></svg>`;
 
@@ -88,7 +92,29 @@ function cachePresignedUrl(key: string, value: { url: string; expiresAt: number 
 }
 
 /**
- * Generates a presigned Cloudflare R2 GetObject URL (cached for 12 hours)
+ * Reads a JSON body without throwing on HTML.
+ *
+ * Under `vite preview` (and any host with an SPA rewrite) an unknown path like
+ * /api/photo-url returns index.html with a 200, so a plain response.json()
+ * rejects with a SyntaxError. One per member card, so it floods the console
+ * and hides real errors. Returning null keeps the fallback avatar path quiet.
+ */
+async function parseJsonSafely(response: Response): Promise<Record<string, unknown> | null> {
+  try {
+    const type = response.headers.get('content-type') || '';
+    if (!type.includes('application/json')) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asks the serverless function for a presigned URL for this photo.
+ *
+ * Cached in memory so browsing the directory does not issue one request per
+ * photo per render. Falls back to the generated avatar when the endpoint is
+ * missing or errors, which is what happens under `vite preview` (no /api).
  */
 export async function getPresignedPhotoUrl(photoKeyOrUrl?: string): Promise<string> {
   if (!photoKeyOrUrl || photoKeyOrUrl.trim() === '') {
@@ -99,11 +125,8 @@ export async function getPresignedPhotoUrl(photoKeyOrUrl?: string): Promise<stri
     return photoKeyOrUrl;
   }
 
-  // Extract clean key e.g. photos/p006_x104.png
-  let cleanKey = photoKeyOrUrl;
-  if (photoKeyOrUrl.startsWith('http://') || photoKeyOrUrl.startsWith('https://')) {
-    cleanKey = photoKeyOrUrl.replace(/^https?:\/\/[^\/]+\//, '').replace(/^\//, '');
-  }
+  const cleanKey = toPhotoKey(photoKeyOrUrl);
+  if (!cleanKey) return DEFAULT_AVATAR;
 
   const now = Date.now();
   const cached = presignedUrlCache.get(cleanKey);
@@ -112,43 +135,44 @@ export async function getPresignedPhotoUrl(photoKeyOrUrl?: string): Promise<stri
   }
 
   try {
-    if (!s3Client) {
-      // No R2 credentials configured — fall back to the generated avatar
-      // rather than throwing on every card.
+    const response = await fetch(`${PRESIGN_ENDPOINT}?key=${encodeURIComponent(cleanKey)}`);
+    if (!response.ok) {
+      // 503 means the server has no storage credentials, 400 a bad key.
+      // Neither is worth retrying on every card.
+      console.warn(`Photo signing unavailable (${response.status}) for ${cleanKey}`);
       return DEFAULT_AVATAR;
     }
 
-    const command = new GetObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: cleanKey,
-    });
+    const data = await parseJsonSafely(response);
+    if (!data) return DEFAULT_AVATAR;
 
-    // 24 hours expiry
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 86400 });
+    const url = typeof data?.url === 'string' ? data.url : '';
+    if (!url) return DEFAULT_AVATAR;
+
+    const ttl = Number(data.expiresIn) || 86400;
     cachePresignedUrl(cleanKey, {
-      url: presignedUrl,
-      // Slightly under the 24 h signature so a cached URL is never handed out
-      // moments before it expires.
-      expiresAt: now + 80000 * 1000,
+      url,
+      // Refresh a minute before expiry so a cached URL is never handed out
+      // moments before it stops working.
+      expiresAt: now + (ttl - 60) * 1000,
     });
-    return presignedUrl;
+    return url;
   } catch (err) {
-    console.error('Failed to generate presigned R2 URL:', err);
+    console.error('Failed to fetch presigned photo URL:', err);
     return DEFAULT_AVATAR;
   }
 }
 
 /**
- * Synchronous photo URL generator fallback
+ * Synchronous accessor: returns a cached URL immediately, otherwise the
+ * fallback avatar and kicks off a background fetch for the real one.
  */
 export function getPhotoUrlSync(photoKeyOrUrl?: string): string {
   if (!photoKeyOrUrl || photoKeyOrUrl.trim() === '') return DEFAULT_AVATAR;
   if (photoKeyOrUrl.startsWith('data:')) return photoKeyOrUrl;
 
-  let cleanKey = photoKeyOrUrl;
-  if (photoKeyOrUrl.startsWith('http://') || photoKeyOrUrl.startsWith('https://')) {
-    cleanKey = photoKeyOrUrl.replace(/^https?:\/\/[^\/]+\//, '').replace(/^\//, '');
-  }
+  const cleanKey = toPhotoKey(photoKeyOrUrl);
+  if (!cleanKey) return DEFAULT_AVATAR;
 
   const cached = presignedUrlCache.get(cleanKey);
   // Honour the expiry here too: returning an expired URL would render as a
@@ -156,10 +180,8 @@ export function getPhotoUrlSync(photoKeyOrUrl?: string): string {
   if (cached && cached.expiresAt > Date.now() + 60000) return cached.url;
   if (cached) presignedUrlCache.delete(cleanKey);
 
-  // Background trigger (no-op when R2 is not configured).
-  if (isR2Configured) {
-    getPresignedPhotoUrl(cleanKey).catch(() => {});
-  }
+  // Background fetch; the component re-renders when it resolves.
+  getPresignedPhotoUrl(cleanKey).catch(() => {});
   return DEFAULT_AVATAR;
 }
 
@@ -221,7 +243,15 @@ export function validatePhotoFile(file: File): { valid: boolean; error?: string 
 }
 
 /**
- * Encodes image file for permanent storage
+ * Uploads a member photo and returns the R2 object key.
+ *
+ * The file goes to the server, which writes it to the bucket and returns a
+ * short key. Nothing large is kept in the member record: the previous approach
+ * stored a base64 data URL, which for a 5 MB photo was ~6.7 MB of localStorage
+ * and silently failed the write.
+ *
+ * Returns `photo_url: ''` because the display URL is always derived from the
+ * key at render time — see `toPhotoKey`.
  */
 export async function processPhotoUpload(file: File): Promise<{ photo_key: string; photo_url: string }> {
   const validation = validatePhotoFile(file);
@@ -229,19 +259,48 @@ export async function processPhotoUpload(file: File): Promise<{ photo_key: strin
     throw new Error(validation.error);
   }
 
-  return new Promise((resolve, reject) => {
+  const base64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const result = reader.result as string;
-      const timestamp = Date.now();
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const photo_key = `photos/${timestamp}_${sanitizedName}`;
-      resolve({
-        photo_key,
-        photo_url: result,
-      });
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : '');
     };
-    reader.onerror = (err) => reject(err);
+    reader.onerror = () => reject(new Error('Could not read the selected file.'));
     reader.readAsDataURL(file);
   });
+
+  if (!base64) throw new Error('Could not read the selected file.');
+
+  // Reuse the caller's Supabase access token so the server can verify that
+  // this is an administrator.
+  let authHeader: Record<string, string> = {};
+  try {
+    const { supabase } = await import('./supabase');
+    if (supabase) {
+      const result = await supabase.auth.getSession();
+      const token = result?.data?.session?.access_token;
+      if (token) authHeader = { Authorization: `Bearer ${token}` };
+    }
+  } catch {
+    // No session available; the server will reject the upload with 403.
+  }
+
+  const response = await fetch('/api/photo-upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader },
+    body: JSON.stringify({ fileName: file.name, contentType: file.type, dataBase64: base64 }),
+  });
+
+  if (!response.ok) {
+    let message = `Upload failed (${response.status})`;
+    const body = await parseJsonSafely(response);
+    if (body?.error) message = String(body.error);
+    throw new Error(message);
+  }
+
+  const data = await parseJsonSafely(response);
+  if (!data?.photo_key) throw new Error('The server did not return a photo key.');
+
+  return { photo_key: String(data.photo_key), photo_url: '' };
 }

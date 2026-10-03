@@ -18,6 +18,7 @@ public.
 - [Quick start](#quick-start)
 - [Environment variables](#environment-variables)
 - [Database setup](#database-setup)
+- [Serverless functions](#serverless-functions)
 - [Scripts](#scripts)
 - [Project structure](#project-structure)
 - [Architecture](#architecture)
@@ -68,7 +69,7 @@ public.
 | Styling | Tailwind CSS 3.4 (dark mode via class strategy) |
 | Icons | lucide-react |
 | Database | Supabase (Postgres + Auth + RLS) |
-| Photo storage | Cloudflare R2 (S3-compatible, presigned URLs) |
+| Photo storage | Cloudflare R2 (S3-compatible, presigned URLs signed server-side) |
 | Spreadsheets | SheetJS (`xlsx`) for bulk import |
 | Card export | html2canvas |
 
@@ -99,49 +100,109 @@ to all interfaces.
 
 Copy `.env.example` to `.env` and fill in the values.
 
+### Browser-exposed
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `VITE_SUPABASE_URL` | For real auth | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | For real auth | Supabase anon/public key |
-| `VITE_R2_ENDPOINT` | For photos | R2 endpoint, e.g. `https://<account>.r2.cloudflarestorage.com` |
-| `VITE_R2_ACCESS_KEY_ID` | For photos | R2 access key ID |
-| `VITE_R2_SECRET_ACCESS_KEY` | For photos | R2 secret access key |
-| `VITE_R2_BUCKET_NAME` | For photos | R2 bucket name |
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
 
-> **The `VITE_` prefix is required.** Vite only exposes prefixed variables to
-> browser code. Defining an unprefixed `R2_SECRET_ACCESS_KEY` has no effect.
->
-> These variables are embedded in the client bundle at build time. Treat the R2
-> keys as public and scope them to a read-only bucket policy. Never place a
-> service-role key or database URL in a `VITE_`-prefixed variable.
+These two are safe to expose — the anon key is public by design and access is
+governed by Row Level Security.
 
-If R2 variables are absent the app degrades gracefully to generated SVG avatars
-rather than erroring.
+### Server-only (never prefix with `VITE_`)
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `R2_ENDPOINT` | For photos | R2 endpoint, e.g. `https://<account>.r2.cloudflarestorage.com` |
+| `R2_ACCESS_KEY_ID` | For photos | R2 access key ID |
+| `R2_SECRET_ACCESS_KEY` | For photos | R2 secret access key |
+| `R2_BUCKET_NAME` | For photos | R2 bucket name |
+
+> **Do not add a `VITE_` prefix to any of these.** Vite inlines every
+> `VITE_`-prefixed variable into the public JavaScript, so a prefixed R2 secret
+> would be readable by anyone who loads the site. These are read only by the
+> serverless functions in `api/`, which run on Vercel.
+
+In Vercel, add the server-only four under **Settings → Environment Variables**.
+Scope the R2 key to read/write on that one bucket — no other bucket needs it.
+
+If the R2 variables are absent the app degrades gracefully to generated SVG
+avatars rather than erroring.
 
 ---
 
 ## Database setup
 
-Run the migration once in the **Supabase SQL Editor** (Dashboard → SQL Editor →
-New query). The repository has no migration runner, so the schema lives only in
-the live database.
+Run the migrations once in the **Supabase SQL Editor** (Dashboard → SQL Editor →
+New query), in order. The repository has no migration runner, so the schema
+lives only in the live database. All of them are idempotent and safe to re-run.
+
+| Order | File | Purpose |
+| --- | --- | --- |
+| 1 | `001_member_approval_status.sql` | Approval workflow and the join-request staging table |
+| 2 | `002_join_requests_missing_columns.sql` | Adds columns the staging table is missing |
+| 3 | `003_members_missing_columns.sql` | Adds the approval columns to the members table |
+| 4 | `004_admin_users_table.sql` | Administrator roster in Postgres |
+| 5 | `005_tighten_rls_admin_checks.sql` | Makes RLS actually enforce admin-only writes |
+
+> **Run all five.** `001` used `create table if not exists`, so on a database
+> where the tables already existed its later columns were silently skipped —
+> which is why `002` and `003` exist. If you only run `001`, every write fails
+> with `PGRST204`.
+
+> **`005` is the security-critical one.** `002` and `003` left write policies
+> open to *any* signed-in user (`using (true)`). Because the Supabase anon key
+> ships in the public bundle, anyone could call the REST API directly and
+> approve their own application, delete members, or read the whole join-request
+> queue. `005` replaces those with a `public.is_active_admin()` check. Until you
+> run it, the database is still open to any account that signs up.
+
+`001` adds the approval workflow: an `approval_status` column
+(`approved` / `pending` / `rejected`) defaulting to `approved`, review columns
+(`reviewed_by`, `reviewed_at`, `rejection_reason`), the
+`cse_archive_join_requests` staging table, RLS policies, and supporting
+indexes.
+
+`004` creates `cse_archive_admin_users` and seeds the existing super
+administrator. This is what makes admin status server-controlled rather than a
+localStorage array anyone can edit, and it is the roster `/api/photo-upload`
+checks before accepting an upload.
+
+---
+
+## Serverless functions
+
+Vercel deploys everything in `api/` automatically — no configuration needed.
+They read the server-only environment variables described above.
+
+| Endpoint | Method | Auth | Purpose |
+| --- | --- | --- | --- |
+| `/api/photo-url` | `GET`, `POST` | None (the bucket stays private) | Signs a `photos/…` key into a 24 h URL |
+| `/api/photo-upload` | `POST` | Active administrator | Stores an uploaded photo and returns its key |
+| `/api/admin-roster` | `POST` | Active administrator | Adds an admin or changes an account's status |
+
+`/api/photo-url` rejects anything outside the `photos/` prefix and any path
+containing `..`, so it cannot be used to sign arbitrary objects.
+
+`/api/photo-upload` and `/api/admin-roster` resolve the caller's Supabase
+session to an email and check that email against `cse_archive_admin_users`. If
+the database is unreachable they **fail closed** and reject the request.
+
+`/api/admin-roster` exists because the roster table deliberately grants the
+browser no write policy. It also enforces two rules the browser cannot: only a
+super administrator may create or change another super administrator, and the
+last active super administrator cannot be disabled (which would lock the site
+out of its own admin console).
+
+### Local development
+
+`vite preview` and `vite dev` serve only the static bundle, so `/api/*` will 404
+and photos fall back to generated SVG avatars. To exercise the real endpoints:
 
 ```bash
-# open supabase/migrations/001_member_approval_status.sql and paste it into the editor
+npx vercel dev
 ```
-
-The migration is idempotent and safe to re-run. It:
-
-1. Adds `approval_status` (`approved` / `pending` / `rejected`) to
-   `cse_archive_members`, defaulting to `approved`
-2. Backfills existing rows to `approved`, so the existing archive keeps working
-   unchanged
-3. Adds review columns: `reviewed_by`, `reviewed_at`, `rejection_reason`
-4. Creates `cse_archive_join_requests` as the staging table for applications
-5. Enables row level security with insert-from-anon and
-   authenticated-read/update policies
-6. Adds supporting indexes, including a partial unique index that prevents
-   duplicate pending requests per email address
 
 ---
 
@@ -159,11 +220,15 @@ The migration is idempotent and safe to re-run. It:
 ## Project structure
 
 ```
+api/                           Serverless functions (Vercel, auto-detected)
+├── photo-url.js               Signs a photos/ key into a temporary URL
+└── photo-upload.js            Stores an uploaded photo (admin only)
+
 src/
 ├── App.tsx                    Root router; picks mobile vs desktop UI
 ├── components/
 │   ├── admin/                 Admin console (10 tabs)
-│   ├── common/                Navbar, Footer, LoginModal, Pagination
+│   ├── common/                Navbar, Footer, LoginModal, ErrorBoundary
 │   ├── directory/             MemberCard, MemberModal, FilterBar
 │   └── mobile/                Mobile shell, cards, and bottom sheets
 ├── context/                   AuthContext, ThemeContext
@@ -306,16 +371,41 @@ environment you use.
 an admin password appeared in git history, treat them as public. Remove them from
 the code, rotate them at the provider, and purge them from history if needed.
 
-Recommendations for this project:
+### Already addressed
 
-- Scope R2 keys to read-only. Presigned URLs are generated in the browser, so the
-  secret is unavoidably present client-side
-- Move approval decisions behind a Supabase Edge Function if you need tamper-proof
-  enforcement; today an authenticated user with the anon key could call the
-  update policy directly
-- Replace the hard-coded super-admin email check in `AuthContext` and `storage.ts`
-  with a database-driven role lookup
-- Serve the site over HTTPS
+- **The R2 secret is no longer in the browser bundle.** It used to be read from
+  `VITE_R2_SECRET_ACCESS_KEY`, which Vite inlines into the public JavaScript —
+  handing anyone who loaded the site a full bucket credential. Signing now
+  happens in `/api/photo-url` using server-only variables. Never re-add a
+  `VITE_` prefix to a credential.
+- **Admin status is server-controlled.** The roster moved from a localStorage
+  array (editable in DevTools) to `cse_archive_admin_users`. The hardcoded
+  super-admin email check has been removed from both the bundle and the sign-in
+  path, and a stale cached grant is re-verified against the roster on load.
+- **Database writes now require a real administrator** (migration `005`).
+  Previously the RLS write policies were `using (true)` for every signed-in
+  user, and since the anon key is public that meant anyone could approve their
+  own application or delete members. Writes are gated on
+  `public.is_active_admin()`, which reads the JWT email — never a client-supplied
+  column.
+- **Join-request contents are no longer readable by any signed-in user.** The
+  old policy used `auth.uid() is not null`, so any applicant who signed up could
+  read every pending application, including other people's email and phone
+  numbers. Reads are now admin-only.
+
+### Still worth doing
+
+- **Rotate the R2 keys and the admin password.** Both were committed before the
+  cleanup above, so they remain in git history even though neither is in the
+  current bundle.
+- **Approval decisions are still client-driven.** An admin's *decision* is
+  recorded from the browser, so the audit trail depends on the client telling
+  the truth about what was approved. The database now guarantees only *who* may
+  write, not what they wrote.
+- **Photo keys are public.** Anyone can request a signed URL for any
+  `photos/…` key. That is fine here because member records are already public,
+  but it means the bucket is not a place for private images.
+- Serve the site over HTTPS.
 
 ### Required once: R2 bucket CORS
 
@@ -325,8 +415,8 @@ a canvas that was tainted by a cross-origin image with no CORS headers. The R2
 bucket sends none by default, so `toDataURL()` throws a SecurityError.
 
 Set it in the Cloudflare dashboard (**R2 → `cse-alumni` → Settings → CORS
-Policy**), because the R2 API keys in `.env` are scoped read-only and cannot
-write bucket configuration:
+Policy**), because the R2 API keys are scoped and cannot write bucket
+configuration:
 
 | Setting | Value |
 | --- | --- |
