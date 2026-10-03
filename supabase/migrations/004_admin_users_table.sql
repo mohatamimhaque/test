@@ -46,7 +46,9 @@ create table if not exists public.cse_archive_admin_users (
   email       text        not null unique,
   role        text        not null default 'admin',
   status      text        not null default 'active',
-  created_by  text,
+  -- uuid, NOT text: on the live table this references a Supabase Auth user id.
+  -- Writing a readable label here fails with 22P02.
+  created_by  uuid,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
 
@@ -59,7 +61,7 @@ create table if not exists public.cse_archive_admin_users (
 -- Reconcile a pre-existing table that lacks these columns. A fresh database
 -- already has them, so this is a no-op there.
 alter table public.cse_archive_admin_users add column if not exists user_id    uuid;
-alter table public.cse_archive_admin_users add column if not exists created_by text;
+alter table public.cse_archive_admin_users add column if not exists created_by uuid;
 alter table public.cse_archive_admin_users add column if not exists created_at timestamptz not null default now();
 alter table public.cse_archive_admin_users add column if not exists updated_at timestamptz not null default now();
 

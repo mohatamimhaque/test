@@ -26,7 +26,7 @@ const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 const ROLES = ['admin', 'super_admin'];
 const STATUSES = ['active', 'disabled'];
 
-const ADMIN_LIST_COLUMNS = 'id,email,role,status,created_by,created_at,updated_at';
+const ADMIN_LIST_COLUMNS = 'id,user_id,email,role,status,created_by,created_at,updated_at';
 
 /** Strips the `Bearer ` prefix so the raw JWT can be forwarded to PostgREST. */
 function rawToken(authHeader) {
@@ -140,7 +140,7 @@ export default async function handler(req, res) {
       email,
       role,
       status: 'active',
-      created_by: current?.created_by || caller?.email || null,
+      created_by: current?.created_by ?? caller?.user_id ?? null,
     };
 
     // Two different writes, because `id` is a uuid with a database default.
