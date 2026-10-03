@@ -145,18 +145,27 @@ lives only in the live database. All of them are idempotent and safe to re-run.
 | 3 | `003_members_missing_columns.sql` | Adds the approval columns to the members table |
 | 4 | `004_admin_users_table.sql` | Administrator roster in Postgres |
 | 5 | `005_tighten_rls_admin_checks.sql` | Makes RLS actually enforce admin-only writes |
+| 6 | `006_close_admin_roster_hole.sql` | **Urgent.** Removes the live write policies on the roster |
 
-> **Run all five.** `001` used `create table if not exists`, so on a database
+> **Run all six.** `001` used `create table if not exists`, so on a database
 > where the tables already existed its later columns were silently skipped —
 > which is why `002` and `003` exist. If you only run `001`, every write fails
 > with `PGRST204`.
 
-> **`005` is the security-critical one.** `002` and `003` left write policies
-> open to *any* signed-in user (`using (true)`). Because the Supabase anon key
-> ships in the public bundle, anyone could call the REST API directly and
-> approve their own application, delete members, or read the whole join-request
-> queue. `005` replaces those with a `public.is_active_admin()` check. Until you
-> run it, the database is still open to any account that signs up.
+> **`006` is urgent and independent.** It closes a hole that is live on the
+> current database *right now*: the anon key — the one in the public bundle —
+> can INSERT, UPDATE and DELETE rows in `cse_archive_admin_users`. Verified
+> against production: `INSERT` → 201, escalate any account to `super_admin` →
+> 204, `DELETE` → 204. That is full takeover of the admin console by an
+> anonymous visitor. Run `006` before anything else.
+
+> **`005` is the security-critical one for the other tables.** `002` and `003`
+> left write policies open to *any* signed-in user (`using (true)`). Because the
+> Supabase anon key ships in the public bundle, anyone could call the REST API
+> directly and approve their own application, delete members, or read the whole
+> join-request queue. `005` replaces those with a `public.is_active_admin()`
+> check. Until you run it, those tables are still open to any account that signs
+> up.
 
 `001` adds the approval workflow: an `approval_status` column
 (`approved` / `pending` / `rejected`) defaulting to `approved`, review columns
@@ -392,6 +401,12 @@ the code, rotate them at the provider, and purge them from history if needed.
   old policy used `auth.uid() is not null`, so any applicant who signed up could
   read every pending application, including other people's email and phone
   numbers. Reads are now admin-only.
+- **The roster `id` column is a `uuid`, not text.** This is worth knowing before
+  you edit the migrations: seeding it with a readable value like
+  `admin-super-mohatamim` fails with
+  `22P02 invalid input syntax for type uuid`. Let the column default generate
+  the uuid instead. The server code sends `id` only when updating an existing
+  row.
 
 ### Still worth doing
 

@@ -1094,8 +1094,13 @@ export function addAdminUser(email: string, role: 'admin' | 'super_admin', actor
   const next: AdminUser = existing
     ? { ...existing, role, status: 'active', updated_at: new Date().toISOString() }
     : {
-        id: 'admin-' + Date.now(),
-        user_id: 'user-' + Date.now(),
+        // The live `cse_archive_admin_users.id` column is a uuid with a
+        // database-side default, so this placeholder must NOT be sent as an id
+        // — a value like 'admin-...' is rejected with 22P02. Leave it empty
+        // locally and let the server assign the real uuid (see
+        // syncAdminRoster below, which omits `id` for new admins).
+        id: '',
+        user_id: '',
         email: cleanEmail,
         role,
         status: 'active',
@@ -1130,6 +1135,14 @@ export function toggleAdminStatus(id: string, status: 'active' | 'disabled', act
   const admins = getAdminUsers();
   const index = admins.findIndex(a => a.id === id);
   if (index === -1) return;
+
+  // A just-added admin is in the local cache before the server has assigned its
+  // uuid `id`. Toggling it now would send an empty id and be rejected, so re-read
+  // the roster instead of writing a row that cannot be addressed.
+  if (!id) {
+    getAdminUsers();
+    return;
+  }
 
   admins[index].status = status;
   admins[index].updated_at = new Date().toISOString();

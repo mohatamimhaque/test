@@ -63,7 +63,15 @@ async function getCallerRow(authHeader) {
  * true, so these writes are rejected for anyone who is not already an admin.
  * That is the enforcement point; this function only supplies credentials.
  */
-async function rosterWrite(authHeader, path, method, body, prefer) {
+/**
+ * Issues a PostgREST write using the caller's own token.
+ *
+ * The token is what makes this work: migration 005 installs a roster-write
+ * trigger that raises unless `is_active_admin()` is true for the JWT on this
+ * request. So the credentials still decide access — this function just supplies
+ * them, instead of trusting a client-side flag.
+ */
+async function rosterWrite(authHeader, path, method, body) {
   const token = rawToken(authHeader);
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     method,
@@ -71,9 +79,7 @@ async function rosterWrite(authHeader, path, method, body, prefer) {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      Prefer: prefer
-        ? `return=representation,resolution=${prefer}`
-        : 'return=representation',
+      Prefer: 'return=representation',
     },
     body: JSON.stringify(body),
   });
@@ -117,7 +123,6 @@ export default async function handler(req, res) {
       return sendError(res, 403, 'Only a super administrator can create a super administrator.');
     }
 
-    const id = 'admin-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     const rows = await listRoster(authHeader);
     const current = rows.find((r) => String(r?.email || '').toLowerCase().trim() === email) || null;
 
@@ -128,27 +133,47 @@ export default async function handler(req, res) {
     }
 
     const payload = {
-      id: current?.id || id,
+      // `id` is a uuid column with a database default. Only send it when
+      // updating an existing row; a generated string like 'admin-abc' is
+      // rejected by Postgres with 22P02 invalid input syntax for type uuid.
+      ...(current?.id ? { id: current.id } : {}),
       email,
       role,
       status: 'active',
       created_by: current?.created_by || caller?.email || null,
     };
 
-    // PostgREST needs `Prefer: resolution=merge-duplicates` for POST to behave
-    // as an upsert; a bare POST against an existing primary key returns 409.
-    // Re-adding an existing admin is a normal action in the Admin manager.
-    const write = await rosterWrite(authHeader, 'cse_archive_admin_users', 'POST', payload, {
-      resolution: 'merge-duplicates',
-    });
-    if (!write.ok) {
-      const detail = await write.text().catch(() => '');
-      console.error('Failed to upsert admin:', write.status, detail);
-      return sendError(res, 502, 'The administrator roster could not be updated.');
-    }
+    // Two different writes, because `id` is a uuid with a database default.
+//
+//   new admin      -> plain POST, no id: the DEFAULT generates the uuid.
+//   existing admin -> PATCH on the email, which is UNIQUE.
+//
+// An upsert cannot be used here: `Prefer: resolution=merge-duplicates` needs a
+// conflict target, and onConflict=id would be wrong anyway because a brand-new
+// row has no id yet. Patching by email also means re-adding an existing admin
+// updates it instead of failing with 409 on the primary key.
+if (current?.id) {
+  const write = await rosterWrite(
+    authHeader,
+    `cse_archive_admin_users?id=eq.${encodeURIComponent(current.id)}`,
+    'PATCH',
+    payload
+  );
+  if (!write.ok) {
+    const detail = await write.text().catch(() => '');
+    console.error('Failed to update admin:', write.status, detail);
+    return sendError(res, 502, 'The administrator roster could not be updated.');
+  }
+} else {
+  const write = await rosterWrite(authHeader, 'cse_archive_admin_users', 'POST', payload);
+  if (!write.ok) {
+    const detail = await write.text().catch(() => '');
+    console.error('Failed to insert admin:', write.status, detail);
+    return sendError(res, 502, 'The administrator roster could not be updated.');
+  }
+}
 
-    const saved = await write.json().catch(() => []);
-    return res.status(200).json({ admin: Array.isArray(saved) ? saved[0] || payload : payload });
+return res.status(200).json({ admin: { ...payload, id: current?.id || null } });
   }
 
   // ------------------------------------------------------------- toggle status
@@ -158,6 +183,12 @@ export default async function handler(req, res) {
 
     if (!id) return sendError(res, 400, 'Missing administrator id.');
     if (!STATUSES.includes(status)) return sendError(res, 400, 'Status must be active or disabled.');
+
+    // `id` is a uuid column. A non-uuid value here would surface as a raw
+    // Postgres 22P02 from PostgREST, so reject it with a clear message instead.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return sendError(res, 400, 'That administrator id is not valid.');
+    }
 
     // Locking yourself out is unrecoverable through the UI: the roster has no
     // self-service, so refuse to disable the last active super administrator.
