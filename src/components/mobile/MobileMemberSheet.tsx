@@ -12,7 +12,8 @@ import { usePhotoUrl, getDefaultAvatar } from '../../lib/r2';
 import { deriveSeriesAndBatch } from '../../lib/seriesBatch';
 import { trackMemberView } from '../../lib/storage';
 import { Sheet } from './MobilePrimitives';
-import { Download, Phone, Mail, MapPin, Building2, IdCard, Droplet, Loader2 } from 'lucide-react';
+import { isCanvasSafeImage } from '../../lib/canvasImage';
+import { Download, Phone, Mail, MapPin, Building2, IdCard, Droplet, Loader2, Info } from 'lucide-react';
 
 interface MobileMemberSheetProps {
   member: Member | null;
@@ -63,6 +64,7 @@ export const MobileMemberSheet: React.FC<MobileMemberSheetProps> = ({ member, on
   const { url: photoUrl, loading: photoLoading } = usePhotoUrl(member?.photo_url || member?.photo_key);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (member) {
@@ -70,6 +72,7 @@ export const MobileMemberSheet: React.FC<MobileMemberSheetProps> = ({ member, on
     }
     setImgLoaded(false);
     setSaving(false);
+    setNotice(null);
   }, [member]);
 
   if (!member) return null;
@@ -81,26 +84,88 @@ export const MobileMemberSheet: React.FC<MobileMemberSheetProps> = ({ member, on
     if (!cardRef.current) return;
     try {
       setSaving(true);
+
+      // Without CORS on the bucket the photo taints the canvas and
+      // toDataURL() throws. Probe first, and drop the photo from the export
+      // rather than failing the whole download.
+      const photoIsSafe = await isCanvasSafeImage(photoUrl || '');
+      const originalSrc = cardRef.current
+        ?.querySelector('img')
+        ?.getAttribute('src');
+
+      if (!photoIsSafe && originalSrc) {
+        cardRef.current.querySelector('img')?.removeAttribute('src');
+      }
+
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#070c1a',
         useCORS: true,
+        // The photo is an R2 presigned URL with no CORS headers, so html2canvas
+        // must not try to re-fetch it once the src has been stripped.
+        allowTaint: false,
         scale: 2,
       });
+
+      // Restore for the next open.
+      if (!photoIsSafe && originalSrc) {
+        cardRef.current.querySelector('img')?.setAttribute('src', originalSrc);
+      }
+
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `alumni_card_${member.student_id || member.id}.png`;
       link.href = dataUrl;
       link.click();
+
+      if (!photoIsSafe) {
+        setNotice('Card saved without the photo. Add CORS to the R2 bucket to include it.');
+      }
     } catch (err) {
       console.error('Save card error:', err);
-      alert('Failed to save card image.');
+      setNotice('Could not save the card. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
+  const actions = (
+    <div className="grid grid-cols-2 gap-2.5">
+      <button
+        onClick={handleSaveCard}
+        disabled={saving}
+        className="m-tap flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary-600 active:bg-primary-700 text-white text-xs font-bold shadow-lg shadow-primary-500/20 disabled:opacity-60"
+      >
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+        Save Card
+      </button>
+
+      {member.mobile ? (
+        <a
+          href={`tel:${member.mobile}`}
+          className="m-tap flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-500 active:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/20"
+        >
+          <Phone className="w-4 h-4" />
+          Call
+        </a>
+      ) : (
+        <button
+          onClick={onClose}
+          className="m-tap flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold"
+        >
+          Close
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <Sheet open={Boolean(member)} onClose={onClose} title="Member Profile">
+    <Sheet
+      open={Boolean(member)}
+      onClose={onClose}
+      title="Member Profile"
+      subtitle={member.student_id ? `ID ${member.student_id}` : undefined}
+      footer={actions}
+    >
       <div
         ref={cardRef}
         className="rounded-3xl p-5 space-y-4 relative text-white font-sans bg-gradient-to-b from-[#0f1d38] via-[#091124] to-[#060a17] border border-[#1d2d4d] shadow-2xl"
@@ -197,48 +262,12 @@ export const MobileMemberSheet: React.FC<MobileMemberSheetProps> = ({ member, on
         </div>
       </div>
 
-      {/* Primary actions, outside the exported card area */}
-      <div className="grid grid-cols-2 gap-2.5 mt-4">
-        <button
-          onClick={handleSaveCard}
-          disabled={saving}
-          className="m-tap flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary-600 active:bg-primary-700 text-white text-xs font-bold shadow-lg shadow-primary-500/20 disabled:opacity-60"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          Save Card
-        </button>
-
-        {member.email ? (
-          <a
-            href={`mailto:${member.email}`}
-            className="m-tap flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold"
-          >
-            <Mail className="w-4 h-4 text-primary-500" />
-            Email
-          </a>
-        ) : (
-          <button
-            onClick={onClose}
-            className="m-tap flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold"
-          >
-            Close
-          </button>
-        )}
-      </div>
-
-      {member.mobile && (
-        <a
-          href={`tel:${member.mobile}`}
-          className="m-tap mt-2.5 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-500 active:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/20"
-        >
-          <Phone className="w-4 h-4" />
-          Call {member.mobile}
-        </a>
+      {notice && (
+        <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5">
+          <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-amber-800 dark:text-amber-300 min-w-0">{notice}</p>
+        </div>
       )}
-
-      <p className="text-center text-[9px] font-extrabold tracking-widest text-slate-400 dark:text-slate-600 uppercase pt-4 pb-1">
-        Dhaka University of Engineering and Technology, Gazipur
-      </p>
     </Sheet>
   );
 };

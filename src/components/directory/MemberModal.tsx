@@ -4,7 +4,8 @@ import { Member } from '../../types';
 import { usePhotoUrl, getDefaultAvatar } from '../../lib/r2';
 import { deriveSeriesAndBatch } from '../../lib/seriesBatch';
 import { trackMemberView } from '../../lib/storage';
-import { Download, X, Loader2 } from 'lucide-react';
+import { isCanvasSafeImage } from '../../lib/canvasImage';
+import { Download, X, Loader2, Info } from 'lucide-react';
 
 interface MemberModalProps {
   member: Member | null;
@@ -15,12 +16,16 @@ export const MemberModal: React.FC<MemberModalProps> = ({ member, onClose }) => 
   const cardRef = useRef<HTMLDivElement>(null);
   const { url: photoUrl, loading: photoLoading } = usePhotoUrl(member?.photo_url || member?.photo_key);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (member) {
       trackMemberView(member.id, member.name);
     }
     setImgLoaded(false);
+    setSaving(false);
+    setNotice(null);
   }, [member]);
 
   if (!member) return null;
@@ -31,20 +36,46 @@ export const MemberModal: React.FC<MemberModalProps> = ({ member, onClose }) => 
   const handleSaveCard = async () => {
     if (!cardRef.current) return;
     try {
+      setSaving(true);
+
+      // The R2 bucket sends no CORS headers, so drawing the photo taints the
+      // canvas and toDataURL() throws a SecurityError. Probe first and export
+      // without the photo rather than failing the whole download.
+      const photoIsSafe = await isCanvasSafeImage(photoUrl || '');
+      const imgEl = cardRef.current.querySelector('img');
+      const originalSrc = imgEl?.getAttribute('src');
+
+      if (!photoIsSafe && originalSrc) {
+        imgEl?.removeAttribute('src');
+      }
+
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#070c1a',
         useCORS: true,
+        allowTaint: false,
         scale: 2,
       });
+
+      if (!photoIsSafe && originalSrc) {
+        imgEl?.setAttribute('src', originalSrc);
+      }
 
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `alumni_card_${member.student_id || member.id}.png`;
       link.href = dataUrl;
       link.click();
+
+      setNotice(
+        photoIsSafe
+          ? null
+          : 'Card saved without the photo. Add CORS to the R2 bucket to include it.'
+      );
     } catch (err) {
       console.error('Save card error:', err);
-      alert('Failed to save card image.');
+      setNotice('Could not save the card. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -176,23 +207,31 @@ export const MemberModal: React.FC<MemberModalProps> = ({ member, onClose }) => 
 
           </div>
 
-          {/* Action Buttons: Horizontal on mobile, vertical on desktop */}
-          <div className="flex md:flex-col gap-3 w-full max-w-sm md:w-auto shrink-0 justify-center">
+          {/* Action Buttons */}
+          <div className="flex md:flex-col gap-2.5 w-full max-w-sm md:w-auto shrink-0 justify-center">
             <button
               onClick={handleSaveCard}
-              className="flex-1 md:flex-initial md:w-16 h-12 md:h-16 rounded-2xl bg-[#0d162a] border border-amber-500/40 text-amber-400 hover:bg-amber-500/20 flex items-center md:flex-col justify-center gap-2 md:gap-1 shadow-xl transition-all duration-200"
+              disabled={saving}
+              className="flex-1 md:flex-initial md:w-full md:w-40 h-11 md:h-auto md:py-3 px-4 rounded-2xl bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20 transition-colors"
             >
-              <Download className="w-5 h-5" />
-              <span className="text-xs md:text-[10px] font-bold">Save Card</span>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {saving ? 'Saving' : 'Save Card'}
             </button>
 
             <button
               onClick={onClose}
-              className="flex-1 md:flex-initial md:w-16 h-12 md:h-16 rounded-2xl bg-[#0d162a] border border-slate-700 text-slate-300 hover:bg-slate-800/80 flex items-center md:flex-col justify-center gap-2 md:gap-1 shadow-xl transition-all duration-200"
+              className="flex-1 md:flex-initial md:w-full md:w-40 h-11 md:h-auto md:py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
             >
-              <X className="w-5 h-5" />
-              <span className="text-xs md:text-[10px] font-bold">Close</span>
+              <X className="w-4 h-4" />
+              Close
             </button>
+
+            {notice && (
+              <p className="md:w-56 flex items-start gap-1.5 text-[10px] leading-relaxed text-amber-300/90 bg-amber-500/10 border border-amber-500/25 rounded-xl px-2.5 py-2">
+                <Info className="w-3 h-3 shrink-0 mt-0.5" />
+                <span className="min-w-0">{notice}</span>
+              </p>
+            )}
           </div>
 
         </div>

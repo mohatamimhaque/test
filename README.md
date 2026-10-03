@@ -170,9 +170,11 @@ src/
 ├── data/                      Seed datasets
 ├── hooks/
 │   ├── useDeviceType.ts       Device detection and UI override
-│   └── useMemberDirectory.ts  Shared search/filter/sort/pagination logic
+│   ├── useMemberDirectory.ts  Shared search/filter/sort/pagination logic
+│   └── usePersistentState.ts  UI state (tabs, layout) remembered across reloads
 ├── lib/
 │   ├── r2.ts                  Photo URLs, avatars, uploads
+│   ├── canvasImage.ts         CORS-safe image probe for card export
 │   ├── seriesBatch.ts         Series/batch derivation from student IDs
 │   ├── storage.ts             Data layer (localStorage + Supabase)
 │   └── supabase.ts            Supabase client
@@ -315,6 +317,32 @@ Recommendations for this project:
   with a database-driven role lookup
 - Serve the site over HTTPS
 
+### Required once: R2 bucket CORS
+
+**"Save Card" downloads the card without the member photo** until this is set.
+html2canvas draws the card onto a `<canvas>`, and the browser refuses to export
+a canvas that was tainted by a cross-origin image with no CORS headers. The R2
+bucket sends none by default, so `toDataURL()` throws a SecurityError.
+
+Set it in the Cloudflare dashboard (**R2 → `cse-alumni` → Settings → CORS
+Policy**), because the R2 API keys in `.env` are scoped read-only and cannot
+write bucket configuration:
+
+| Setting | Value |
+| --- | --- |
+| AllowedOrigins | `*` |
+| AllowedMethods | `GET`, `HEAD` |
+| AllowedHeaders | `*` |
+| ExposeHeaders | `ETag` |
+| MaxAgeSeconds | `86400` |
+
+This does **not** make the photos public. Every object still requires a valid
+presigned URL; CORS only decides whether a browser page that already holds such
+a URL may read the response.
+
+Until then the app degrades gracefully: it detects the tainted canvas and
+exports the card without the photo rather than failing outright.
+
 ---
 
 ## Troubleshooting
@@ -322,6 +350,19 @@ Recommendations for this project:
 **All photos show placeholder avatars**
 The `VITE_R2_*` variables are missing or misspelled. Vite ignores variables
 without the `VITE_` prefix. Verify with `grep VITE_R2 .env`.
+
+**"Save Card" produces a card with no photo**
+The bucket has no CORS policy, so the canvas is tainted and the export is
+blocked. See [R2 bucket CORS](#required-once-r2-bucket-cors) above.
+
+**"Save Card" fails outright**
+Open the browser console. A `SecurityError` on `toDataURL()` means the CORS
+policy is missing. A blank download usually means `html2canvas` hit a layout it
+cannot parse; re-run after the modal has fully animated in.
+
+**"Request saved, but the server could not be reached"**
+PostgREST rejected the write with `PGRST204`, meaning the table is missing a
+column the app sends. Run migrations `002` and `003` in the Supabase SQL editor.
 
 **Sign-in codes are rejected**
 Real delivery requires SMTP to be configured on the Supabase project. Without it,
